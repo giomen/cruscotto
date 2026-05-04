@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cruscotto digitale</title>
+    <link rel="preload" href="assets/fonts/Montserrat-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="assets/fonts/RobotoCondensed-Regular.ttf" as="font" type="font/ttf" crossorigin>
+    
+    <!-- CSS ottimizzato -->
+    <link rel="stylesheet" href="./style.css">
+    
+    <!-- Odometer CSS minimo (solo se usato) -->
+    <link rel="stylesheet" href="./odometer.css" />
+    <script src="./odometer.min.js"></script>
+    <script type="module" src="./main.js"></script>
+
+</head>
+
+<body>
+
+    <div class="controls">
+        <div class="slider">
+            <label for="needleAngle">Posizione lancetta</label>
+            <div class="controls-row">
+                <input id="needleAngle" type="range" min="-110" max="110" step="1" value="0">
+                <span class="angle-value"><span id="needleAngleValue">0</span>°</span>
+            </div>
+            <label for="fuelLevel">Livello carburante</label>
+            <div class="controls-row">
+                <input id="fuelLevel" type="range" min="0" max="100" step="1" value="60">
+                <span class="angle-value"><span id="fuelLevelValue">60</span>%</span>
+            </div>
+        </div>
+        <div class="spie-toggles" style="display: flex; flex-direction: column;">
+            <p style="margin: 0 0 4px 0;">Spie</p>
+            <label><input type="checkbox" data-spia="luci"> Anabbaglianti</label>
+            <label><input type="checkbox" data-spia="fendi"> Fendinebbia</label>
+            <label><input type="checkbox" data-spia="profo"> Profondità</label>
+            <label><input type="checkbox" data-spia="generat"> Batteria</label>
+            <label><input type="checkbox" data-spia="olio"> Olio</label>
+        </div>
+    </div>
+    <div class="wrapper">
+    <div class="dashboard-display">
+        <div class="tacche-principali" id="tacche-principali"></div>
+        <div class="tacche-raggiera" id="tacche-raggiera"></div>
+        <div class="numbers-ring" id="numbers-ring"></div>
+        <div class="border-dial">
+            <svg viewBox="0 0 100 100" width="200" height="200">
+                <circle cx="50" cy="50" r="45" fill="none" />
+            </svg>
+        </div>
+        <div class="center-dial">
+            <div class="speed-wrapper">
+                <div class="speed-value" id="speedValue">0</div>
+                <div class="speed-label">km/h</div>
+            </div>
+            <div class="icons-odo-container">
+                <div class="icon-unit color-luci">
+                    <svg width="221.36" height="121.88" viewBox="0 0 221.36 121.88" class="icon-svg">
+                        <path fill-rule="nonzero"
+                            d="M16557.6 15106.1h-1.4c-143.1-8-297.1-159.4-303.3-324-14.7-219.6 158.2-368.5 296.7-377.5l1.9-.1c7.5 0 14.6 3 19 8.6 44.1 55.7 120.7 196.6 112.5 341.3-21.1 209.2-70.5 281.3-106.3 341.7-3.8 6.3-11.1 10-19.1 10m-34.7-98.2c27.4-49.5 54.8-116.9 69.5-260.5 4.4-90.4-35.1-186.9-71-245.7-39.1 11.9-79.6 38.8-111.4 75.1-33.8 38.6-72.8 104.4-66.4 199.2l.1 1.3v1.3c4 105.1 94 202 179.2 229.3M15883.8 15106.1c-7.9 0-15.2-3.7-19-10-35.8-60.4-85.2-132.5-106.3-341.7-8.2-144.7 68.4-285.6 112.5-341.3 4.4-5.6 11.5-8.6 19-8.6l1.9.1c138.5 9 311.4 157.9 296.7 377.5-6.3 164.6-160.2 316-303.3 324zm34.8-98.2c85.2-27.3 175.2-124.2 179.2-229.3v-1.3l.1-1.3c6.3-94.8-32.6-160.6-66.4-199.2-31.8-36.3-72.3-63.2-111.4-75.1-35.9 58.8-75.4 155.3-71 245.7 14.7 143.6 42.1 211 69.5 260.5M17028.5 14816.6H16750v-102.7h278.5zM16892.9 15222.3l-238-144.7 53.4-87.7 237.9 144.7zM16728.4 14540.6l-53.3-87.7 237.9-144.7 53.4 87.8zM15646.8 14816.6h-278.5v-102.7h278.5zM15503.9 15222.3l-53.3-87.7 237.9-144.7 53.4 87.7zM15668.4 14540.6l-238-144.6 53.4-87.8 237.9 144.7z"
+                            transform="matrix(.13333 0 0 -.13333 -2049.107 2029.64)" />
+                    </svg>
+                </div>
+                <div class="icon-unit color-profo">
+                        <svg width="181.772" height="154.307" viewBox="0 0 181.772 154.307" class="icon-svg">
+                            <path fill-rule="nonzero"
+                                d="M14146.5 19429.3c-22.1 0-40.1-17.9-40.1-40-.1-22.2 17.8-40.2 40-40.3l586.7-1.6h.2c22.1 0 40 17.9 40.1 40 0 22.1-17.9 40.1-40 40.2l-586.8 1.7zM14146.5 19150.1c-22.1 0-40.1-17.9-40.1-40-.1-22.2 17.8-40.2 40-40.2l586.7-1.7h.2c22.1 0 40 17.9 40.1 40 0 22.2-17.9 40.2-40 40.3l-586.8 1.6zM14146.5 18870.9c-22.1 0-40.1-17.8-40.1-40-.1-22.1 17.8-40.1 40-40.2l586.7-1.6h.2c22.1 0 40 17.9 40.1 40 0 22.1-17.9 40.1-40 40.2l-586.8 1.6zM13863.8 19674.5l-2.1-.1c-212.4-13.2-441-263-450.3-534.4-21.7-362.2 234.8-607.8 440.5-622.7.9-.1 1.8-.1 2.7-.1 11.2 0 21.8 5 28.3 14.2 65.5 91.8 179.2 324.1 167 562.9-31.3 345-104.7 463.9-157.8 563.5-5.6 10.5-16.5 16.7-28.3 16.7m-32.3-96.1c47-88.3 101.7-206 127.7-490.4 8.8-182.8-68.1-373-131.6-475.6-156.3 33.5-342.8 232.6-325.4 522.1v1.2l.1 1.2c7.5 217.9 178 406.8 329.2 441.5"
+                                transform="translate(1969.787 2623.267)scale(-.13333)" />
+                            <path fill-rule="nonzero"
+                                d="M14411.9 18549.1c-9.3 0-18.5 3.5-25.6 10.5-74.4 73.7-104.9 153.7-90.8 237.8 8 47.6 32.9 84.9 54.9 117.8 27.3 40.7 43.6 67.3 36.3 99.4-3.8 16.7-21.3 41.1-38.2 64.7-18.3 25.5-39 54.5-51.5 85.4-32.5 80.4 2.7 177.3 87.4 241.2 15.5 11.6 22 24.6 21.1 42-2.3 44.4-51.4 100.5-85.6 121.2-17.2 10.4-22.7 32.8-12.3 50 10.4 17.1 32.8 22.7 50 12.2 47.7-28.8 116.7-103.7 120.5-179.7 2.1-41.7-15.1-77.6-49.9-103.8-58.1-43.8-83.7-106.4-63.8-155.9 9.2-22.8 26.5-46.9 43.3-70.3 22-30.8 42.8-59.9 49.9-90.8 14.7-64.3-17.9-113-46.7-156.1-19.7-29.4-38.3-57.2-43.7-89.3-10.1-60.3 12.9-117.2 70.3-174.1 14.2-14.2 14.3-37.2.2-51.4-7.1-7.2-16.5-10.8-25.8-10.8"
+                                transform="translate(1969.787 2623.267)scale(-.13333)" />
+                        </svg>
+                </div>
+                <div class="icon-unit color-fendi">
+                    <svg width="178.009" height="154.307" viewBox="0 0 178.009 154.307" class="icon-svg">
+                        <path fill-rule="nonzero"
+                            d="M11740.4 19540.7c-4.5 0-9.1-.7-13.5-2.3l-552.1-198.8c-20.9-7.5-31.7-30.5-24.2-51.3 5.9-16.4 21.3-26.5 37.7-26.5 4.6 0 9.1.7 13.6 2.3l552.1 198.8c20.9 7.5 31.7 30.5 24.2 51.3-5.9 16.4-21.3 26.5-37.8 26.5M11740.4 19269.1c-4.5 0-9.1-.8-13.5-2.4l-552.1-198.8c-20.9-7.5-31.7-30.4-24.2-51.3 5.9-16.3 21.3-26.5 37.7-26.5 4.6 0 9.1.8 13.6 2.4l552.1 198.7c20.9 7.5 31.7 30.5 24.2 51.3-5.9 16.4-21.3 26.6-37.8 26.6M11757.5 18997.4q-6.75 0-13.5-2.4l-552.1-198.7c-20.9-7.5-31.7-30.5-24.2-51.4 5.9-16.3 21.3-26.5 37.8-26.5 4.5 0 9.1.8 13.5 2.4l552.1 198.7c20.9 7.5 31.7 30.5 24.2 51.4-5.9 16.3-21.3 26.5-37.8 26.5M12029.6 19674.5c-11.8 0-22.7-6.2-28.3-16.7-53.1-99.6-126.5-218.5-157.9-563.5-12.1-238.8 101.6-471.1 167-562.9 6.6-9.2 17.2-14.2 28.3-14.2 1 0 1.9 0 2.8.1 205.6 14.9 462.2 260.5 440.5 622.7-9.4 271.4-237.9 521.2-450.4 534.4zm32.2-96.1c151.3-34.7 321.8-223.6 329.3-441.5v-1.2l.1-1.2c17.4-289.5-169.2-488.6-325.4-522.1-63.5 102.6-140.4 292.8-131.7 475.6 26.1 284.4 80.8 402.1 127.7 490.4"
+                            transform="matrix(.13333 0 0 -.13333 -1486.43 2623.267)" />
+                        <path fill-rule="nonzero"
+                            d="M11481.5 18549.1c-9.4 0-18.7 3.6-25.8 10.8-14.2 14.2-14.1 37.2.2 51.4 57.4 56.9 80.3 113.8 70.2 174.1-5.4 32.1-23.9 59.9-43.6 89.3-28.8 43.1-61.4 91.8-46.7 156.1 7 30.9 27.9 60 49.9 90.8 16.7 23.3 34 47.5 43.2 70.3 20 49.5-5.6 112.1-63.7 155.9-34.8 26.2-52.1 62.1-50 103.8 3.9 76 72.9 150.9 120.6 179.7 17.2 10.4 39.6 4.9 50-12.2 10.3-17.2 4.9-39.6-12.3-50-34.3-20.7-83.4-76.8-85.6-121.2-.9-17.4 5.6-30.4 21-42 84.8-63.9 120-160.8 87.5-241.2-12.5-30.9-33.2-59.9-51.6-85.5-16.9-23.5-34.3-47.9-38.1-64.6-7.4-32.1 9-58.7 36.2-99.4 22-32.9 47-70.2 55-117.8 14.1-84.1-16.5-164.1-90.8-237.8-7.1-7-16.3-10.5-25.6-10.5"
+                            transform="matrix(.13333 0 0 -.13333 -1486.43 2623.267)" />
+                    </svg>
+                </div>
+                <div class="odometer-wrapper">
+                    <div class="odometer" id="odometer">00000</div>
+                    <div class="odometer-km">Km</div>
+                </div>
+                <div class="icon-unit color-benzina">
+                    <svg width="137.742" height="187.387" viewBox="0 0 137.742 187.387" class="icon-svg">
+                        <path fill-rule="nonzero"
+                            d="M12058.4 15468h-548.9c-46 0-83.3-37.3-83.3-83.4v-455.8c0-46 37.3-83.3 83.3-83.3h548.9c46 0 83.3 37.3 83.3 83.3v455.8c0 46.1-37.3 83.4-83.3 83.4m-25.8-109.1v-404.3h-497.3v404.3z"
+                            transform="matrix(.13333 0 0 -.13333 -1513.653 2062.4)" />
+                        <path fill-rule="nonzero" d="M12000.5 14062.6h-429.9v866.3h429.9z"
+                            transform="matrix(.13333 0 0 -.13333 -1513.653 2062.4)" />
+                        <path fill-rule="nonzero"
+                            d="M12363.1 14062.6h-1010.7v54.5h1010.7zM12294.7 15223.1h-21.4v38.4h21.4zm89.3-806c-11.3 147.6-75.4 580.7-52.9 739.6h15.6c2.8 13.7 6.8 117.9 0 138-4 7.1-141.9 120.9-154.5 108.2-23.2-23.7-25.8-43.7-20.5-61.1 16.7-14.6 31.8-15.1 45.4-33.4 10.5-21.7-11.3-89.8 24.7-118.8 15.5-13.6 24.2-14.5 32.2-4.9-26.4-65.4-20-359.6 5.6-524.2 9.7-83.4 37.5-282.3 31.1-323.1 5.3-101.6-135.8-130.5-151.8 18.2-7.6 170 65.1 375.5 29.8 502.8-19.2 50.1-26.1 65.6-53.4 76.9-43.8 9.6-54.6-22.4-36.9-38.4 17.6-16.2 43.4-79.3 24.1-234.4-42.9-209.6-56.7-430.9 85-466.7 134.3-30.6 187.8 73.8 176.5 221.3"
+                            transform="matrix(.13333 0 0 -.13333 -1513.653 2062.4)" />
+                    </svg>
+                </div>
+                <div class="icon-unit color-generat">
+                    <svg width="211.436" height="162.347" viewBox="0 0 211.436 162.347" class="icon-svg">
+                        <path fill-rule="nonzero"
+                            d="M10390.1 17466.4H8804.33V16357h1585.77zm-109.1-109.1v-891.2H8913.43v891.2z"
+                            transform="matrix(.13333 0 0 -.13333 -1173.91 2343.28)" />
+                        <path fill-rule="nonzero"
+                            d="M9278.01 17454.8h-286.64v119.8h286.64zM10219.2 17454.8h-286.62v119.8h286.62zM9278.01 17084.7h-286.64v102.7h286.64zM10219.2 17084.7h-286.62v102.7h286.62z"
+                            transform="matrix(.13333 0 0 -.13333 -1173.91 2343.28)" />
+                        <path fill-rule="nonzero" d="M10024.6 16992.8v286.6h102.6v-286.6z"
+                            transform="matrix(.13333 0 0 -.13333 -1173.91 2343.28)" />
+                    </svg>
+                </div>
+                <div class="icon-unit color-olio">
+                    <svg width="233.027" height="93.307" viewBox="0 0 233.027 93.307" class="icon-svg">
+                        <path fill-rule="nonzero"
+                            d="m11253.1 10316.2-311.2 118.3v362.8l311.2-99.7zM11349.4 10097.5h-96.3v600.1l96.3-41.7z"
+                            transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                        <path fill-rule="nonzero" d="M12066.5 10193.8v-96.3H11290l54 96.3z"
+                            transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                        <path fill-rule="nonzero" d="m12530.6 10697.7 67.9-68.2-532-532-47.7 90.2z"
+                            transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                        <path fill-rule="nonzero" d="m12039.1 10397.6-40.6 87.3 540.5 230.3 59.5-85.7z"
+                            transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                        <path fill-rule="nonzero"
+                            d="m12032.2 10499.2 6.9-101.6-157.1 111v96.3zM11882 10604.9v-96.3h-620.8l43.1 96.3zM11777 10774.9v-96.2h-345v96.2z"
+                            transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                        <path fill-rule="nonzero"
+                        d="M11652.6 10584.5h-96.2v130.7h96.2zM12689.6 10287.4c0-60.6-49.1-109.6-109.7-109.6-60.5 0-109.6 49-109.6 109.6 0 60.5 109.6 209.1 109.6 209.1s109.7-148.6 109.7-209.1"
+                        transform="matrix(.13333 0 0 -.13333 -1458.92 1439.64)" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="tacche-interne">
+            <div class="tacca-interna tacca-interna-sottile tacca-interna1"></div>
+        </div>
+
+        <div class="needle"></div>
+        <div class="fuel-gauge" id="fuelGauge">
+            <div class="fuel-tacche" id="fuelTacche"></div>
+            <div class="fuel-labels">
+                <span class="fuel-label fuel-label-e">E</span>
+                <span class="fuel-label fuel-label-half">½</span>
+                <span class="fuel-label fuel-label-f">F</span>
+            </div>
+        </div>
+        
+    </div>
+    </div>
+</body>
+
+</html>
