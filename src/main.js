@@ -13,7 +13,7 @@ const NEEDLE_W   = R * (11   / 200);
 const NEEDLE_H   = R * (102  / 200);
 const NEEDLE_TOP = R * (-272 / 200);
 const NEEDLE_OX  = 10;
-const NEEDLE_OY  = 850;
+const NEEDLE_OY  = 330;
 
 // Needle
 const needleEl = document.querySelector('.needle');
