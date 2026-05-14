@@ -41,6 +41,10 @@
             <label><input type="checkbox" data-spia="generat"> Batteria</label>
             <label><input type="checkbox" data-spia="olio"> Olio</label>
         </div>
+        <label class="toggle-row">
+            <input type="checkbox" id="toggleMap">
+            <span>Mappa</span>
+        </label>
     </div>
     <div class="wrapper">
     <div class="dashboard-display">
@@ -134,13 +138,15 @@
                 </div>
             </div>
         </div>
-        
+        <div class="map-container"></div>
+        <div class="map-info"></div>
 
         <div class="tacche-interne">
             <div class="tacca-interna tacca-interna-sottile tacca-interna1"></div>
         </div>
 
         <div class="needle"></div>
+        <div class="origin-marker"></div>
         <div class="fuel-gauge" id="fuelGauge">
             <div class="fuel-tacche" id="fuelTacche"></div>
             <div class="fuel-labels">

@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 :root {
     --bg-color: #F9F3E0;
     --dial-black: #1a1a1a;
@@ -33,7 +35,11 @@ body {
     font-family: "Roboto Condensed", sans-serif;
     font-weight: 300;
 }
-
+@keyframes disegna {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
 .controls {
     width: 400px;
     display: flex;
@@ -459,6 +465,7 @@ body {
     right: 0;
     margin: auto;
     top: 0;
+    z-index: 11;
 }
 
 .fuel-tacche {
@@ -625,12 +632,12 @@ body {
 
 .icon-unit svg {
     width: 100%;
-    height: 35px;
+    height: 28px;
 }
 
 .icon-svg {
     width: 100%;
-    height: 35px;
+    height: 28px;
     margin-top: 5px;
     /*filter: drop-shadow(0 0 5px currentColor);*/
 }
@@ -709,4 +716,80 @@ svg {
 .toggle-row input[type="checkbox"]:checked::before {
     transform: translateX(16px);
     background: #fff;
+}
+
+/* ── NavMode ──────────────────────────────── */
+.dashboard-display.NavMode .center-dial {
+    height: 85%;
+}
+
+.dashboard-display.NavMode .speed-wrapper {
+    display: none;
+}
+
+.dashboard-display.NavMode .numbers-ring {
+    transform: translate(-0.5%, -39.5%);
+}
+
+.dashboard-display.NavMode .number {
+    font-size: 30px !important;
+    transform-origin: 50% calc(50% + 280px) !important;
+}
+
+.dashboard-display.NavMode .needle {
+    height: 80px !important;
+    top: -580px !important;
+}
+
+.map-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 1;
+    overflow: hidden;
+    mask-image: radial-gradient(ellipse at 50% 50%, black 25%, transparent 64%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 25%, transparent 64%);
+}
+
+.origin-marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: red;
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 200;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.dashboard-display.NavMode .map-container {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.map-container .leaflet-container {
+    width: 100%;
+    height: 100%;
+    background: #1a2a1a;
+}
+
+.map-info {
+    height: 150px;
+    width: 600px;
+    background: var(--dial-black);
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    z-index: 1;
+    box-shadow: 0 -50px 50px var(--dial-black);
 }

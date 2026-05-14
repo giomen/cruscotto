@@ -12,8 +12,8 @@ const FONT_NUMBER     = R * (28  / 200);
 const NEEDLE_W   = R * (11   / 200);
 const NEEDLE_H   = R * (102  / 200);
 const NEEDLE_TOP = R * (-272 / 200);
-const NEEDLE_OX  = R * (6    / 200);
-const NEEDLE_OY  = R * (184  / 200);
+const NEEDLE_OX  = 10;
+const NEEDLE_OY  = 850;
 
 // Needle
 const needleEl = document.querySelector('.needle');
@@ -21,6 +21,15 @@ needleEl.style.width           = `${NEEDLE_W}px`;
 needleEl.style.height          = `${NEEDLE_H}px`;
 needleEl.style.top             = `${NEEDLE_TOP}px`;
 needleEl.style.transformOrigin = `${NEEDLE_OX}px ${NEEDLE_OY}px`;
+
+// ── Origin marker (debug) ────────────────────
+const originMarker = document.querySelector('.origin-marker');
+const needleRect = needleEl.getBoundingClientRect();
+const dashRect = dashboard.getBoundingClientRect();
+const oxPx = NEEDLE_OX;
+const oyPx = NEEDLE_OY;
+originMarker.style.left = `${oxPx + (720 - NEEDLE_W) / 2}px`;
+originMarker.style.top  = `${NEEDLE_TOP + oyPx}px`;
 
 // ── Odometer ──────────────────────────────────
 var od = new Odometer({
@@ -148,6 +157,64 @@ function setNeedleAngle(angle) {
 angleInput.addEventListener('input', e => setNeedleAngle(e.target.valueAsNumber));
 window.setDashboardNeedle = angle => setNeedleAngle(angle);
 setNeedleAngle(angleInput.valueAsNumber);
+
+// ── Toggle Map ────────────────────────────────
+import L from 'leaflet';
+
+let mapInstance = null;
+
+document.getElementById('toggleMap').addEventListener('change', e => {
+    dashboard.classList.toggle('NavMode', e.target.checked);
+    if (e.target.checked && !mapInstance) {
+        const container = document.querySelector('.map-container');
+        mapInstance = L.map(container, {
+            center: [41.9028, 12.4964],
+            zoom: 18,
+            zoomControl: false,
+            attributionControl: false,
+            dragging: false,
+            scrollWheelZoom: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            keyboard: false,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(mapInstance);
+
+        const punti = [
+            { pos: [41.9028, 12.4964], label: 'Partenza' },
+            { pos: [41.9060, 12.4800], label: 'Fermata 1' },
+            { pos: [41.8950, 12.5100], label: 'Fermata 2' },
+            { pos: [41.9100, 12.4700], label: 'Fermata 3' },
+            { pos: [41.8980, 12.4850], label: 'Destinazione' },
+        ];
+
+        punti.forEach(p => {
+            L.circleMarker(p.pos, {
+                radius: 6,
+                fillColor: '#6CCB4C',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9,
+            }).addTo(mapInstance).bindPopup(p.label);
+        });
+
+        L.polyline(punti.map(p => p.pos), {
+            color: '#6CCB4C',
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '8 6',
+        }).addTo(mapInstance);
+
+        setTimeout(() => mapInstance.invalidateSize(), 400);
+    }
+    if (mapInstance) {
+        setTimeout(() => mapInstance.invalidateSize(), 50);
+    }
+});
 
 // ── Spie ──────────────────────────────────────
 document.querySelectorAll('[data-spia]').forEach(checkbox => {
