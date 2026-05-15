@@ -168,7 +168,7 @@ document.getElementById('toggleMap').addEventListener('change', e => {
     if (e.target.checked && !mapInstance) {
         const container = document.querySelector('.map-container');
         mapInstance = L.map(container, {
-            center: [41.9028, 12.4964],
+            center: [45.2017, 9.1763],
             zoom: 18,
             zoomControl: false,
             attributionControl: false,
@@ -180,34 +180,51 @@ document.getElementById('toggleMap').addEventListener('change', e => {
         });
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
+            maxZoom: 40,
         }).addTo(mapInstance);
 
-        const punti = [
-            { pos: [41.9028, 12.4964], label: 'Partenza' },
-            { pos: [41.9060, 12.4800], label: 'Fermata 1' },
-            { pos: [41.8950, 12.5100], label: 'Fermata 2' },
-            { pos: [41.9100, 12.4700], label: 'Fermata 3' },
-            { pos: [41.8980, 12.4850], label: 'Destinazione' },
-        ];
+        const from = [45.20465970588177, 9.171326044897937];
+        const to   = [45.198663367330454, 9.18123634099786];
 
-        punti.forEach(p => {
-            L.circleMarker(p.pos, {
-                radius: 6,
-                fillColor: '#6CCB4C',
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9,
-            }).addTo(mapInstance).bindPopup(p.label);
-        });
+        L.circleMarker(to, { radius: 6, fillColor: '#005dad', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(mapInstance).bindPopup('Destinazione');
 
-        L.polyline(punti.map(p => p.pos), {
-            color: '#6CCB4C',
-            weight: 3,
-            opacity: 0.7,
-            dashArray: '8 6',
+        function bearing(from, to) {
+            const [lat1, lon1] = from.map(d => d * Math.PI / 180);
+            const [lat2, lon2] = to.map(d => d * Math.PI / 180);
+            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) -
+                      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        const angle = bearing(from, to);
+
+        L.marker(from, {
+            icon: L.divIcon({
+                className: 'car-marker',
+                html: `<div class="car-icon" style="transform:rotate(${angle}deg)"><div class="car-roof"></div></div>`,
+                iconSize: [22, 36],
+                iconAnchor: [11, 18],
+            }),
         }).addTo(mapInstance);
+
+        const routeQuery = `${from[1]},${from[0]};${to[1]},${to[0]}`;
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeQuery}?geometries=geojson&overview=full`;
+        const routeLine = L.polyline([], {
+            color: '#4285F4',
+            weight: 6,
+            opacity: 0.9,
+        }).addTo(mapInstance);
+
+        fetch(routeUrl)
+            .then(r => r.json())
+            .then(data => {
+                if (data.routes && data.routes[0]) {
+                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    routeLine.setLatLngs(coords);
+                    mapInstance.setView(from, 18);
+                }
+            });
 
         setTimeout(() => mapInstance.invalidateSize(), 400);
     }
