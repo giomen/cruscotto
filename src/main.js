@@ -197,14 +197,16 @@ document.getElementById('toggleMap').addEventListener('change', e => {
             return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
         }
 
-        const angle = bearing(from, to);
+        const navIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="50" height="56">
+            <path fill="#005dad" fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33" />
+        </svg>`;
 
-        L.marker(from, {
+        const carMarker = L.marker(from, {
             icon: L.divIcon({
                 className: 'car-marker',
-                html: `<div class="car-icon" style="transform:rotate(${angle}deg)"><div class="car-roof"></div></div>`,
-                iconSize: [22, 36],
-                iconAnchor: [11, 18],
+                html: navIcon,
+                iconSize: [50, 56],
+                iconAnchor: [25, 3],
             }),
         }).addTo(mapInstance);
 
@@ -222,7 +224,28 @@ document.getElementById('toggleMap').addEventListener('change', e => {
                 if (data.routes && data.routes[0]) {
                     const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                     routeLine.setLatLngs(coords);
-                    mapInstance.setView(from, 18);
+                    carMarker.setLatLng(coords[0]);
+                    mapInstance.setView(coords[0], 18, { animate: false });
+
+                    function haversine(a, b) {
+                        const R = 6371000;
+                        const [lat1, lon1] = a.map(d => d * Math.PI / 180);
+                        const [lat2, lon2] = b.map(d => d * Math.PI / 180);
+                        const dlat = lat2 - lat1, dlon = lon2 - lon1;
+                        const s = Math.sin(dlat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)**2;
+                        return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+                    }
+
+                    let idx = 1;
+                    while (idx < coords.length && haversine(coords[0], coords[idx]) < 30) idx++;
+                    const roadAngle = idx < coords.length ? bearing(coords[0], coords[idx]) : bearing(from, to);
+
+                    container.style.transform = `translate(-50%, -50%) rotate(${-roadAngle}deg)`;
+                    container.style.transition = 'transform 0.6s ease';
+                    if (carMarker._icon) {
+                        carMarker._icon.style.transformOrigin = '25px 3px';
+                        carMarker._icon.style.transform += ` rotate(${roadAngle}deg)`;
+                    }
                 }
             });
 

@@ -404,7 +404,6 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    z-index: 12;
 }
 
 .odometer {
@@ -719,6 +718,10 @@ svg {
 }
 
 /* ── NavMode ──────────────────────────────── */
+.dashboard-display.NavMode .border-dial {
+    display: none;
+}
+
 .dashboard-display.NavMode .center-dial {
     height: 85%;
 }
@@ -786,46 +789,8 @@ svg {
     border: none !important;
 }
 
-.car-icon {
-    width: 22px;
-    height: 36px;
-    background: #4285F4;
-    border-radius: 6px 6px 4px 4px;
-    position: relative;
-    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.5);
-}
-
-.car-icon::before {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: 3px;
-    width: 16px;
-    height: 10px;
-    background: #5a9cff;
-    border-radius: 4px 4px 2px 2px;
-}
-
-.car-roof {
-    position: absolute;
-    top: 6px;
-    left: 4px;
-    width: 14px;
-    height: 14px;
-    background: #1a5cb5;
-    border-radius: 3px;
-}
-
-.car-icon::after {
-    content: '';
-    position: absolute;
-    bottom: 4px;
-    left: 2px;
-    width: 6px;
-    height: 4px;
-    background: #ff4444;
-    border-radius: 1px;
-    box-shadow: 12px 0 0 #ff4444;
+.car-marker svg {
+    filter: drop-shadow(0 2px 6px rgba(66, 133, 244, 0.6));
 }
 
 .map-info {
