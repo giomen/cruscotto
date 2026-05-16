@@ -165,9 +165,54 @@ let mapInstance = null;
 let routeCoords = [];
 let routeDists = [];
 let routeTotalLen = 0;
+let routeSteps = [];
 let mapContainer = null;
 let carMarker = null;
 let lastPct = -1;
+
+const stepSvgs = {
+    dritto: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V3"/><polyline points="6 9 12 3 18 9"/></svg>',
+    svoltaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V11a4 4 0 0 1 4-4h10"/><polyline points="16 2 21 7 16 12"/></svg>',
+    svoltaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21V11a4 4 0 0 0-4-4H3"/><polyline points="8 2 3 7 8 12"/></svg>',
+    curvaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21v-7l8-8"/><polyline points="12 6 17 6 17 11"/></svg>',
+    curvaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-7l-8-8"/><polyline points="7 11 7 6 12 6"/></svg>',
+    inversione: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21V10a4 4 0 0 0-4-4h0a4 4 0 0 0-4 4v11"/><polyline points="3 16 8 21 13 16"/></svg>',
+    marker: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="40" height="45" fill="#6CCB4C"><path fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33"/></svg>',
+};
+
+function stepIcon(type, mod) {
+    if (type === 'depart' || type === 'arrive') return stepSvgs.marker;
+    if (type === 'inversion' || mod === 'uturn') return stepSvgs.inversione;
+    if (mod === 'straight' || type === 'continue') return stepSvgs.dritto;
+    if (mod === 'right' || mod === 'slight right') return stepSvgs.svoltaDx;
+    if (mod === 'left' || mod === 'slight left') return stepSvgs.svoltaSx;
+    if (mod === 'sharp right') return stepSvgs.curvaDx;
+    if (mod === 'sharp left') return stepSvgs.curvaSx;
+    return stepSvgs.dritto;
+}
+
+function getStepAtPct(pct) {
+    if (routeSteps.length === 0) return null;
+    const target = pct * routeTotalLen;
+    let cum = 0;
+    for (const s of routeSteps) {
+        cum += s.distance;
+        if (target <= cum) return s;
+    }
+    return routeSteps[routeSteps.length - 1];
+}
+
+function updateSemiPanel(pct) {
+    const step = getStepAtPct(pct);
+    const icon = document.getElementById('semiIcon');
+    const label = document.getElementById('semiLabel');
+    const dist = document.getElementById('semiDist');
+    if (!step) { icon.innerHTML = ''; label.textContent = ''; dist.textContent = ''; return; }
+    icon.innerHTML = stepIcon(step.maneuver.type, step.maneuver.modifier);
+    label.textContent = step.instruction || step.name;
+    const km = (step.distance / 1000).toFixed(1);
+    dist.textContent = km + ' km';
+}
 
 function bearing(from, to) {
     const [lat1, lon1] = from.map(d => d * Math.PI / 180);
@@ -213,6 +258,7 @@ function updatePosition(pct) {
         arrow.style.transformOrigin = '25px 3px';
         arrow.style.transform = `rotate(${angle}deg)`;
     }
+    if (document.getElementById('toggleSemi').checked) updateSemiPanel(pct);
 }
 
 document.getElementById('toggleMap').addEventListener('change', e => {
@@ -255,7 +301,7 @@ document.getElementById('toggleMap').addEventListener('change', e => {
         }).addTo(mapInstance);
 
         const routeQuery = `${from[1]},${from[0]};${to[1]},${to[0]}`;
-        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeQuery}?geometries=geojson&overview=full`;
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeQuery}?geometries=geojson&overview=full&steps=true`;
         const routeLine = L.polyline([], {
             color: '#4285F4',
             weight: 6,
@@ -270,6 +316,7 @@ document.getElementById('toggleMap').addEventListener('change', e => {
                     routeDists = [0];
                     for (let i = 1; i < routeCoords.length; i++) routeDists.push(routeDists[i-1] + haversine(routeCoords[i-1], routeCoords[i]));
                     routeTotalLen = routeDists[routeDists.length - 1];
+                    routeSteps = (data.routes[0].legs?.[0]?.steps || []).filter(s => s.distance > 0);
                     routeLine.setLatLngs(routeCoords);
                     mapContainer.style.transition = 'transform 0.3s ease';
                     document.getElementById('posSlider').value = 0;
@@ -287,6 +334,15 @@ document.getElementById('toggleMap').addEventListener('change', e => {
 
 document.getElementById('posSlider').addEventListener('input', e => {
     updatePosition(+e.target.value / 100);
+});
+
+document.getElementById('toggleSemi').addEventListener('change', e => {
+    const show = e.target.checked;
+    const mc = document.querySelector('.map-container');
+    const sp = document.querySelector('.semi-panel');
+    if (mc) mc.style.display = show ? 'none' : '';
+    if (sp) sp.style.display = show ? '' : 'none';
+    if (show && routeSteps.length) updateSemiPanel(lastPct >= 0 ? lastPct : 0);
 });
 
 // ── Spie ──────────────────────────────────────

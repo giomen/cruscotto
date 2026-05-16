@@ -45,6 +45,10 @@
             <input type="checkbox" id="toggleMap">
             <span>Mappa</span>
         </label>
+        <label class="toggle-row">
+            <input type="checkbox" id="toggleSemi">
+            <span>Semi</span>
+        </label>
         <div class="controls-row" style="margin-top:6px">
             <label for="posSlider" style="font-size:12px">Posizione</label>
             <input id="posSlider" type="range" min="0" max="100" step="1" value="0" style="flex:1">
@@ -143,6 +147,7 @@
             </div>
         </div>
         <div class="map-container"></div>
+        <div class="semi-panel"><div class="semi-icon" id="semiIcon"></div><div class="semi-label" id="semiLabel">Partenza</div><div class="semi-dist" id="semiDist"></div></div>
         <div class="map-info"></div>
 
         <div class="tacche-interne">
