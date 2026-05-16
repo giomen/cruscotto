@@ -35,6 +35,12 @@ body {
     font-family: "Roboto Condensed", sans-serif;
     font-weight: 300;
 }
+@keyframes blink-fuel {
+    0%,10%,90%,100% { opacity: 1; }
+    40% { opacity: 0.10; }
+    50% { opacity: 0.05; }
+    60% { opacity: 0.10; }
+}
 @keyframes disegna {
     to {
       stroke-dashoffset: 0;
@@ -681,6 +687,10 @@ body {
     fill-opacity: 1;
 }
 
+.color-benzina.blink {
+    animation: blink-fuel 1.5s ease-in-out infinite;
+}
+
 .color-olio .icon-svg {
     fill: var(--red);
     fill-opacity: 1;
@@ -828,6 +838,10 @@ svg {
     z-index: 1;
     gap: 12px;
     background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.85) 30%, transparent 72%);
+}
+
+.semi-icon {
+    color: var(--mood-good);
 }
 
 .semi-icon svg {

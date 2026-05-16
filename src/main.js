@@ -56,6 +56,7 @@ const FUEL_END         = 210;
 const FUEL_ARC         = FUEL_END - FUEL_START;
 const QUARTER_INDICES  = new Set([25, 50, 75]);
 const DANGER_THRESHOLD = 20;
+const BLINK_THRESHOLD  = 5;
 
 for (let i = FUEL_COUNT; i > 0; i--) {
     const angle = FUEL_START + (FUEL_ARC / (FUEL_COUNT - 1)) * i;
@@ -85,6 +86,7 @@ function setFuelLevel(percent) {
         tacca.classList.toggle('danger', isActive && isDanger);
         iconaFuel.classList.toggle('active', isDanger);
     });
+    iconaFuel.classList.toggle('blink', percent <= BLINK_THRESHOLD);
 }
 
 fuelInput.addEventListener('input', e => setFuelLevel(+e.target.value));
@@ -171,13 +173,15 @@ let carMarker = null;
 let lastPct = -1;
 
 const stepSvgs = {
-    dritto: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V3"/><polyline points="6 9 12 3 18 9"/></svg>',
-    svoltaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V11a4 4 0 0 1 4-4h10"/><polyline points="16 2 21 7 16 12"/></svg>',
-    svoltaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21V11a4 4 0 0 0-4-4H3"/><polyline points="8 2 3 7 8 12"/></svg>',
-    curvaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21v-7l8-8"/><polyline points="12 6 17 6 17 11"/></svg>',
-    curvaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-7l-8-8"/><polyline points="7 11 7 6 12 6"/></svg>',
-    inversione: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6CCB4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21V10a4 4 0 0 0-4-4h0a4 4 0 0 0-4 4v11"/><polyline points="3 16 8 21 13 16"/></svg>',
-    marker: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="40" height="45" fill="#6CCB4C"><path fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33"/></svg>',
+    dritto: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V3"/><polyline points="6 9 12 3 18 9"/></svg>',
+    svoltaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21V11a4 4 0 0 1 4-4h10"/><polyline points="16 2 21 7 16 12"/></svg>',
+    svoltaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21V11a4 4 0 0 0-4-4H3"/><polyline points="8 2 3 7 8 12"/></svg>',
+    curvaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21v-7l8-8"/><polyline points="12 6 17 6 17 11"/></svg>',
+    curvaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-7l-8-8"/><polyline points="7 11 7 6 12 6"/></svg>',
+    inversione: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21V10a4 4 0 0 0-4-4h0a4 4 0 0 0-4 4v11"/><polyline points="3 16 8 21 13 16"/></svg>',
+    svoltaStrettaDx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21v-8l10 6"/><polyline points="18 13 18 19 12 18"/></svg>',
+    svoltaStrettaSx: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-8L6 19"/><polyline points="6 13 6 19 12 18"/></svg>',
+    marker: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="40" height="45"><path fill="currentColor" fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33"/></svg>',
 };
 
 function stepIcon(type, mod) {
@@ -186,8 +190,8 @@ function stepIcon(type, mod) {
     if (mod === 'straight' || type === 'continue') return stepSvgs.dritto;
     if (mod === 'right' || mod === 'slight right') return stepSvgs.svoltaDx;
     if (mod === 'left' || mod === 'slight left') return stepSvgs.svoltaSx;
-    if (mod === 'sharp right') return stepSvgs.curvaDx;
-    if (mod === 'sharp left') return stepSvgs.curvaSx;
+    if (mod === 'sharp right') return stepSvgs.svoltaStrettaDx;
+    if (mod === 'sharp left') return stepSvgs.svoltaStrettaSx;
     return stepSvgs.dritto;
 }
 
@@ -261,72 +265,75 @@ function updatePosition(pct) {
     if (document.getElementById('toggleSemi').checked) updateSemiPanel(pct);
 }
 
-document.getElementById('toggleMap').addEventListener('change', e => {
-    dashboard.classList.toggle('NavMode', e.target.checked);
-    if (e.target.checked && !mapInstance) {
-        const container = document.querySelector('.map-container');
-        mapContainer = container;
-        mapInstance = L.map(container, {
-            center: [45.2017, 9.1763],
-            zoom: 18,
-            zoomControl: false,
-            attributionControl: false,
-            dragging: false,
-            scrollWheelZoom: false,
-            touchZoom: false,
-            doubleClickZoom: false,
-            keyboard: false,
+function initMap() {
+    if (mapInstance) return;
+    const container = document.querySelector('.map-container');
+    mapContainer = container;
+    mapInstance = L.map(container, {
+        center: [45.2017, 9.1763],
+        zoom: 18,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        keyboard: false,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 40,
+    }).addTo(mapInstance);
+
+    const from = [45.20465970588177, 9.171326044897937];
+    const to   = [45.198663367330454, 9.18123634099786];
+
+    L.circleMarker(to, { radius: 6, fillColor: '#005dad', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(mapInstance).bindPopup('Destinazione');
+
+    const navIcon = `<div class="car-arrow" style="transform-origin:25px 3px;transform:rotate(0deg)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="50" height="56">
+        <path fill="#005dad" fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33" />
+    </svg></div>`;
+
+    carMarker = L.marker(from, {
+        icon: L.divIcon({
+            className: 'car-marker',
+            html: navIcon,
+            iconSize: [50, 56],
+            iconAnchor: [25, 3],
+        }),
+    }).addTo(mapInstance);
+
+    const routeQuery = `${from[1]},${from[0]};${to[1]},${to[0]}`;
+    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeQuery}?geometries=geojson&overview=full&steps=true`;
+    const routeLine = L.polyline([], {
+        color: '#4285F4',
+        weight: 6,
+        opacity: 0.9,
+    }).addTo(mapInstance);
+
+    fetch(routeUrl)
+        .then(r => r.json())
+        .then(data => {
+            if (data.routes && data.routes[0]) {
+                routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                routeDists = [0];
+                for (let i = 1; i < routeCoords.length; i++) routeDists.push(routeDists[i-1] + haversine(routeCoords[i-1], routeCoords[i]));
+                routeTotalLen = routeDists[routeDists.length - 1];
+                routeSteps = (data.routes[0].legs?.[0]?.steps || []).filter(s => s.distance > 0);
+                routeLine.setLatLngs(routeCoords);
+                mapContainer.style.transition = 'transform 0.3s ease';
+                document.getElementById('posSlider').value = 0;
+                lastPct = -1;
+                updatePosition(0);
+            }
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 40,
-        }).addTo(mapInstance);
+    setTimeout(() => mapInstance.invalidateSize(), 400);
+}
 
-        const from = [45.20465970588177, 9.171326044897937];
-        const to   = [45.198663367330454, 9.18123634099786];
-
-        L.circleMarker(to, { radius: 6, fillColor: '#005dad', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(mapInstance).bindPopup('Destinazione');
-
-        const navIcon = `<div class="car-arrow" style="transform-origin:25px 3px;transform:rotate(0deg)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="50" height="56">
-            <path fill="#005dad" fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33" />
-        </svg></div>`;
-
-        carMarker = L.marker(from, {
-            icon: L.divIcon({
-                className: 'car-marker',
-                html: navIcon,
-                iconSize: [50, 56],
-                iconAnchor: [25, 3],
-            }),
-        }).addTo(mapInstance);
-
-        const routeQuery = `${from[1]},${from[0]};${to[1]},${to[0]}`;
-        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${routeQuery}?geometries=geojson&overview=full&steps=true`;
-        const routeLine = L.polyline([], {
-            color: '#4285F4',
-            weight: 6,
-            opacity: 0.9,
-        }).addTo(mapInstance);
-
-        fetch(routeUrl)
-            .then(r => r.json())
-            .then(data => {
-                if (data.routes && data.routes[0]) {
-                    routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    routeDists = [0];
-                    for (let i = 1; i < routeCoords.length; i++) routeDists.push(routeDists[i-1] + haversine(routeCoords[i-1], routeCoords[i]));
-                    routeTotalLen = routeDists[routeDists.length - 1];
-                    routeSteps = (data.routes[0].legs?.[0]?.steps || []).filter(s => s.distance > 0);
-                    routeLine.setLatLngs(routeCoords);
-                    mapContainer.style.transition = 'transform 0.3s ease';
-                    document.getElementById('posSlider').value = 0;
-                    lastPct = -1;
-                    updatePosition(0);
-                }
-            });
-
-        setTimeout(() => mapInstance.invalidateSize(), 400);
-    }
+document.getElementById('toggleMap').addEventListener('change', e => {
+    dashboard.classList.toggle('NavMode', e.target.checked || document.getElementById('toggleSemi').checked);
+    if (e.target.checked) initMap();
     if (mapInstance) {
         setTimeout(() => mapInstance.invalidateSize(), 50);
     }
@@ -338,10 +345,13 @@ document.getElementById('posSlider').addEventListener('input', e => {
 
 document.getElementById('toggleSemi').addEventListener('change', e => {
     const show = e.target.checked;
+    const mapOn = document.getElementById('toggleMap').checked;
+    dashboard.classList.toggle('NavMode', show || mapOn);
+    if (show) initMap();
     const mc = document.querySelector('.map-container');
     const sp = document.querySelector('.semi-panel');
-    if (mc) mc.style.display = show ? 'none' : '';
-    if (sp) sp.style.display = show ? '' : 'none';
+    if (mc) mc.style.display = show ? 'none' : (mapOn ? '' : 'none');
+    if (sp) sp.style.display = show ? 'flex' : 'none';
     if (show && routeSteps.length) updateSemiPanel(lastPct >= 0 ? lastPct : 0);
 });
 
