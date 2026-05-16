@@ -151,7 +151,7 @@ body {
     font-size: 125px;
     font-weight: 400;
     color: var(--dial-cream);
-    text-shadow: 0 0 20px rgba(249, 243, 224, 0.4);
+    /*text-shadow: 0 0 20px rgba(249, 243, 224, 0.4);*/
     letter-spacing: -2px;
     transition: color 0.15s ease;
     min-width: 3ch;
@@ -501,12 +501,25 @@ body {
     opacity: 0.7;
     background: var(--dial-cream);
 }
+.tacca-quarter[data-index="75"] {
+    transform: translate(1px, -4px) rotate(195.455deg) !important;
+}
+.tacca-quarter[data-index="50"] {
+    transform: translate(0px, -4px) rotate(180.303deg) !important;
+}
+.tacca-quarter[data-index="25"] {
+    transform: translate(-1px, -4px) rotate(165.152deg) !important;
+}
+.fuel-tacca.tacca-major[data-index="1"] {
+    transform: translate(-1px, -4px) rotate(150.606deg) !important;
+}
 
 .fuel-tacca.tacca-e {
     background: var(--needle-red) !important;
     width: 3px;
     height: 20px;
     opacity: 1 !important;
+    transform: translate(1px, -4px) rotate(210.606deg) !important;
 }
 
 /* stati active */
@@ -593,8 +606,8 @@ body {
     right: 0;
     transform: rotate(0deg);
     z-index: 100;
-    border-radius: 20px;
-    clip-path: polygon(0% 100%, 100% 100%, 78% 3%, 70% 1%, 60% 0%, 40% 0%, 30% 1%, 22% 3%);
+    border-radius: 3px;
+    clip-path: polygon(0% 100%, 100% 100%, 70% 1%, 60% 0%, 40% 0%, 30% 1%);
     margin: auto;
     background: linear-gradient(0deg, rgb(255,180,59) 0%, rgb(254,140,10) 20%, rgb(254,140,10) 87%, rgb(255,191,89) 100%);
     box-shadow: 0px -10px 0px white;
@@ -654,11 +667,13 @@ body {
 .color-luci .icon-svg {
     fill: var(--mood-good);
     fill-opacity: 1;
+    width: 45px;
 }
 
 .color-generat .icon-svg {
     fill: var(--red);
     fill-opacity: 1;
+    height: 25px;
 }
 
 .color-benzina .icon-svg {
@@ -669,6 +684,7 @@ body {
 .color-olio .icon-svg {
     fill: var(--red);
     fill-opacity: 1;
+    width: 45px;
 }
 svg {
     transition: all .3s ease;
@@ -791,6 +807,10 @@ svg {
 
 .car-marker svg {
     filter: drop-shadow(0 2px 6px rgba(66, 133, 244, 0.6));
+}
+
+.car-arrow {
+    transition: transform 0.3s ease;
 }
 
 .map-info {

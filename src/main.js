@@ -9,7 +9,7 @@ const RADIUS_NUMBERS  = R * (138 / 200);
 const RADIUS_FUEL     = R * (180 / 200);
 const FONT_NUMBER     = R * (28  / 200);
 
-const NEEDLE_W   = R * (11   / 200);
+const NEEDLE_W   = 10;
 const NEEDLE_H   = R * (102  / 200);
 const NEEDLE_TOP = R * (-272 / 200);
 const NEEDLE_OX  = 10;
@@ -162,11 +162,64 @@ setNeedleAngle(angleInput.valueAsNumber);
 import L from 'leaflet';
 
 let mapInstance = null;
+let routeCoords = [];
+let routeDists = [];
+let routeTotalLen = 0;
+let mapContainer = null;
+let carMarker = null;
+let lastPct = -1;
+
+function bearing(from, to) {
+    const [lat1, lon1] = from.map(d => d * Math.PI / 180);
+    const [lat2, lon2] = to.map(d => d * Math.PI / 180);
+    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+              Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function haversine(a, b) {
+    const R = 6371000;
+    const [lat1, lon1] = a.map(d => d * Math.PI / 180);
+    const [lat2, lon2] = b.map(d => d * Math.PI / 180);
+    const dlat = lat2 - lat1, dlon = lon2 - lon1;
+    const s = Math.sin(dlat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+function updatePosition(pct) {
+    const c = routeCoords, d = routeDists;
+    if (c.length < 2 || !carMarker || !mapContainer) return;
+    if (pct === lastPct) return;
+    lastPct = pct;
+
+    const target = pct * routeTotalLen;
+    let lo = 0, hi = d.length - 1;
+    while (lo < hi) { const m = (lo + hi) >>> 1; if (d[m] < target) lo = m + 1; else hi = m; }
+    const seg = Math.max(0, lo - 1);
+    const t = (target - d[seg]) / (d[seg + 1] - d[seg] || 1);
+    const pos = [c[seg][0] + (c[seg+1][0] - c[seg][0]) * t, c[seg][1] + (c[seg+1][1] - c[seg][1]) * t];
+
+    carMarker.setLatLng(pos);
+    mapInstance.panTo(pos, { animate: true, duration: 0.3 });
+
+    let ahead = seg + 1;
+    while (ahead < c.length && haversine(pos, c[ahead]) < 30) ahead++;
+    const angle = ahead < c.length ? bearing(pos, c[ahead]) : bearing(c[seg], c[Math.min(seg + 1, c.length - 1)]);
+
+    mapContainer.style.transform = `translate(-50%, -50%) rotate(${-angle}deg)`;
+    const arrow = carMarker._icon?.querySelector('.car-arrow');
+    if (arrow) {
+        arrow.style.transformOrigin = '25px 3px';
+        arrow.style.transform = `rotate(${angle}deg)`;
+    }
+}
 
 document.getElementById('toggleMap').addEventListener('change', e => {
     dashboard.classList.toggle('NavMode', e.target.checked);
     if (e.target.checked && !mapInstance) {
         const container = document.querySelector('.map-container');
+        mapContainer = container;
         mapInstance = L.map(container, {
             center: [45.2017, 9.1763],
             zoom: 18,
@@ -188,20 +241,11 @@ document.getElementById('toggleMap').addEventListener('change', e => {
 
         L.circleMarker(to, { radius: 6, fillColor: '#005dad', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(mapInstance).bindPopup('Destinazione');
 
-        function bearing(from, to) {
-            const [lat1, lon1] = from.map(d => d * Math.PI / 180);
-            const [lat2, lon2] = to.map(d => d * Math.PI / 180);
-            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-            const x = Math.cos(lat1) * Math.sin(lat2) -
-                      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-        }
-
-        const navIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="50" height="56">
+        const navIcon = `<div class="car-arrow" style="transform-origin:25px 3px;transform:rotate(0deg)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 355 394" width="50" height="56">
             <path fill="#005dad" fill-rule="evenodd" d="M 177.35,254.94 349.73,322.49 177.35,23.89 4.97,322.49 Z m -32.53,79.07 c 0,-20.07 14.57,-36.35 32.53,-36.35 17.97,0 32.53,16.27 32.53,36.35 0,20.06 -14.56,36.33 -32.53,36.33 -17.96,0 -32.53,-16.27 -32.53,-36.33" />
-        </svg>`;
+        </svg></div>`;
 
-        const carMarker = L.marker(from, {
+        carMarker = L.marker(from, {
             icon: L.divIcon({
                 className: 'car-marker',
                 html: navIcon,
@@ -222,30 +266,15 @@ document.getElementById('toggleMap').addEventListener('change', e => {
             .then(r => r.json())
             .then(data => {
                 if (data.routes && data.routes[0]) {
-                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    routeLine.setLatLngs(coords);
-                    carMarker.setLatLng(coords[0]);
-                    mapInstance.setView(coords[0], 18, { animate: false });
-
-                    function haversine(a, b) {
-                        const R = 6371000;
-                        const [lat1, lon1] = a.map(d => d * Math.PI / 180);
-                        const [lat2, lon2] = b.map(d => d * Math.PI / 180);
-                        const dlat = lat2 - lat1, dlon = lon2 - lon1;
-                        const s = Math.sin(dlat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)**2;
-                        return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
-                    }
-
-                    let idx = 1;
-                    while (idx < coords.length && haversine(coords[0], coords[idx]) < 30) idx++;
-                    const roadAngle = idx < coords.length ? bearing(coords[0], coords[idx]) : bearing(from, to);
-
-                    container.style.transform = `translate(-50%, -50%) rotate(${-roadAngle}deg)`;
-                    container.style.transition = 'transform 0.6s ease';
-                    if (carMarker._icon) {
-                        carMarker._icon.style.transformOrigin = '25px 3px';
-                        carMarker._icon.style.transform += ` rotate(${roadAngle}deg)`;
-                    }
+                    routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    routeDists = [0];
+                    for (let i = 1; i < routeCoords.length; i++) routeDists.push(routeDists[i-1] + haversine(routeCoords[i-1], routeCoords[i]));
+                    routeTotalLen = routeDists[routeDists.length - 1];
+                    routeLine.setLatLngs(routeCoords);
+                    mapContainer.style.transition = 'transform 0.3s ease';
+                    document.getElementById('posSlider').value = 0;
+                    lastPct = -1;
+                    updatePosition(0);
                 }
             });
 
@@ -254,6 +283,10 @@ document.getElementById('toggleMap').addEventListener('change', e => {
     if (mapInstance) {
         setTimeout(() => mapInstance.invalidateSize(), 50);
     }
+});
+
+document.getElementById('posSlider').addEventListener('input', e => {
+    updatePosition(+e.target.value / 100);
 });
 
 // ── Spie ──────────────────────────────────────
