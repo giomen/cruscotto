@@ -397,6 +397,73 @@ document.getElementById('toggleSemi').addEventListener('change', e => {
     if (show && routeSteps.length) updateSemiPanel(lastPct >= 0 ? lastPct : 0);
 });
 
+// ── Animazioni ────────────────────────────────
+function animNeedle(ms) {
+    return new Promise(r => {
+        const s = performance.now(), a = -110, b = 110;
+        function f(n) {
+            const t = Math.min((n - s) / ms, 1);
+            let v; if (t < .5) v = a + (b - a) * (t * 2); else v = b - (b - a) * ((t - .5) * 2);
+            setNeedleAngle(v);
+            if (t < 1) requestAnimationFrame(f); else r();
+        }
+        requestAnimationFrame(f);
+    });
+}
+
+function animFuel(ms) {
+    return new Promise(r => {
+        const s = performance.now(), a = 60, b = 2;
+        function f(n) {
+            const t = Math.min((n - s) / ms, 1);
+            setFuelLevel(Math.round(a + (b - a) * t));
+            if (t < 1) requestAnimationFrame(f); else r();
+        }
+        requestAnimationFrame(f);
+    });
+}
+
+function animSpie(ms) {
+    return new Promise(r => {
+        const spie = ['luci','fendi','profo','generat','olio'];
+        const gap = ms / spie.length;
+        spie.forEach((id, i) => setTimeout(() => {
+            const cb = document.querySelector(`[data-spia="${id}"]`);
+            if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+        }, i * gap));
+        setTimeout(r, ms);
+    });
+}
+
+function animOdo(ms) {
+    return new Promise(r => {
+        const s = performance.now(), a = odoValue, b = a + 5;
+        function f(n) {
+            const t = Math.min((n - s) / ms, 1);
+            const v = Math.round(a + (b - a) * t);
+            if (v !== odoValue) { odoValue = v; od.update(v); }
+            if (t < 1) requestAnimationFrame(f); else r();
+        }
+        requestAnimationFrame(f);
+    });
+}
+
+async function runAnimSeq() {
+    const btn = document.getElementById('btnAnimate');
+    if (btn) btn.disabled = true;
+    await animNeedle(3000);
+    await animFuel(4000);
+    await animSpie(3000);
+    await animOdo(5000);
+    if (btn) btn.disabled = false;
+}
+
+document.getElementById('btnAnimate').addEventListener('click', runAnimSeq);
+
+if (new URLSearchParams(location.search).has('animate')) {
+    setTimeout(runAnimSeq, 600);
+}
+
 // ── Spie ──────────────────────────────────────
 document.querySelectorAll('[data-spia]').forEach(checkbox => {
     checkbox.addEventListener('change', e => {
