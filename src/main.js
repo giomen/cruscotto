@@ -1,3 +1,36 @@
+// ── Input handler (URL params + postMessage) ──
+function applyParams(p) {
+    const v = val => val === '1' || val === 1 || val === true;
+    if (p.needleAngle !== undefined) document.getElementById('needleAngle').value = p.needleAngle;
+    if (p.fuelLevel !== undefined) document.getElementById('fuelLevel').value = p.fuelLevel;
+    ['luci','fendi','profo','generat','olio'].forEach(k => {
+        const cb = document.querySelector(`[data-spia="${k}"]`);
+        if (cb && p[k] !== undefined) cb.checked = v(p[k]);
+    });
+    if (p.map !== undefined) document.getElementById('toggleMap').checked = v(p.map);
+    if (p.semi !== undefined) document.getElementById('toggleSemi').checked = v(p.semi);
+    if (p.pos !== undefined) document.getElementById('posSlider').value = p.pos;
+    if (p.odo !== undefined) { odoValue = +p.odo; od.update(odoValue); }
+    if (p.debug) document.getElementById('controls').style.display = '';
+    // trigger handlers
+    document.getElementById('needleAngle').dispatchEvent(new Event('input'));
+    document.getElementById('fuelLevel').dispatchEvent(new Event('input'));
+    document.querySelectorAll('[data-spia]').forEach(cb => cb.dispatchEvent(new Event('change')));
+    document.getElementById('toggleMap').dispatchEvent(new Event('change'));
+    document.getElementById('toggleSemi').dispatchEvent(new Event('change'));
+    document.getElementById('posSlider').dispatchEvent(new Event('input'));
+}
+
+const params = new URLSearchParams(window.location.search);
+const parsed = {};
+for (const [k, val] of params) parsed[k] = /^\d+$/.test(val) ? +val : val;
+
+if (Object.keys(parsed).length) setTimeout(() => applyParams(parsed), 100);
+
+window.addEventListener('message', e => {
+    try { applyParams(typeof e.data === 'object' ? e.data : JSON.parse(e.data)); } catch {}
+});
+
 // ── Dimensioni responsive ─────────────────────
 const dashboard = document.querySelector('.dashboard-display');
 const SIZE = 720;
