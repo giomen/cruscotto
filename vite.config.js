@@ -1,23 +1,39 @@
 import { defineConfig } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
+import { minify } from 'html-minifier-terser'
+import { readFileSync, writeFileSync } from 'fs'
+import { resolve } from 'path'
 
 export default defineConfig({
-  root: 'src',                     // cartella sorgente
+  root: 'src',
 
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    assetsInlineLimit: 100_000_000, // forza base64 per tutto (font, img)
-    cssCodeSplit: false,            // un solo CSS inline
+    assetsInlineLimit: 100_000_000,
+    cssCodeSplit: false,
   },
 
   server: {
-    open: true,                    // apre il browser automaticamente
+    open: true,
   },
 
   plugins: [
     viteSingleFile({
-      removeViteModuleLoader: true, // bundle più pulito
+      removeViteModuleLoader: true,
     }),
+    {
+      name: 'html-minify',
+      closeBundle() {
+        const path = resolve('dist/index.html')
+        const html = readFileSync(path, 'utf-8')
+        minify(html, {
+          collapseWhitespace: true,
+          removeComments: true,
+          minifyCSS: false,
+          minifyJS: false,
+        }).then(out => writeFileSync(path, out))
+      },
+    },
   ],
 })

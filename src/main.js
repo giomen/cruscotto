@@ -32,13 +32,16 @@ originMarker.style.left = `${oxPx + (720 - NEEDLE_W) / 2}px`;
 originMarker.style.top  = `${NEEDLE_TOP + oyPx}px`;
 
 // ── Odometer ──────────────────────────────────
+import odoSrc from './odometer.min.js?raw';
+eval(odoSrc);
+let odoValue = 32791;
 var od = new Odometer({
     el: document.getElementById('odometer'),
-    value: '32791',
+    value: String(odoValue),
     format: 'd',
     theme: 'minimal'
 });
-od.update(32791);
+od.update(odoValue);
 
 const startAngle = -110;
 const endAngle   =  110;
@@ -91,6 +94,12 @@ function setFuelLevel(percent) {
 
 fuelInput.addEventListener('input', e => setFuelLevel(+e.target.value));
 setFuelLevel(+fuelInput.value);
+
+// ── Odometer increment ────────────────────────
+document.getElementById('btnOdoInc').addEventListener('click', () => {
+    odoValue++;
+    od.update(odoValue);
+});
 
 // ── Numbers ring ──────────────────────────────
 const containerNumbers = document.getElementById('numbers-ring');
