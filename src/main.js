@@ -448,11 +448,30 @@ function animOdo(ms) {
     });
 }
 
+function animSemi(ms) {
+    return new Promise(r => {
+        const cb = document.getElementById('toggleSemi');
+        if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+        const fn = () => {
+            if (routeCoords.length < 2) { setTimeout(fn, 100); return; }
+            const s = performance.now();
+            function f(n) {
+                const t = Math.min((n - s) / ms, 1);
+                updatePosition(t);
+                if (t < 1) requestAnimationFrame(f); else r();
+            }
+            requestAnimationFrame(f);
+        };
+        setTimeout(fn, 200);
+    });
+}
+
 async function runAnimSeq() {
     await animNeedle(3000);
     await animFuel(4000);
     await animSpie(3000);
     await animOdo(5000);
+    await animSemi(10000);
 }
 
 setTimeout(runAnimSeq, 800);
