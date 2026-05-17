@@ -449,20 +449,13 @@ function animOdo(ms) {
 }
 
 async function runAnimSeq() {
-    const btn = document.getElementById('btnAnimate');
-    if (btn) btn.disabled = true;
     await animNeedle(3000);
     await animFuel(4000);
     await animSpie(3000);
     await animOdo(5000);
-    if (btn) btn.disabled = false;
 }
 
-document.getElementById('btnAnimate').addEventListener('click', runAnimSeq);
-
-if (new URLSearchParams(location.search).has('animate')) {
-    setTimeout(runAnimSeq, 600);
-}
+setTimeout(runAnimSeq, 800);
 
 // ── Spie ──────────────────────────────────────
 document.querySelectorAll('[data-spia]').forEach(checkbox => {
