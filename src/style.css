@@ -1,5 +1,13 @@
 @import 'leaflet/dist/leaflet.css';
 
+@font-face {
+    font-family: 'Playfair Display';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./assets/fonts/PlayfairDisplay-Italic.woff2') format('woff2');
+}
+
 :root {
     --bg-color: #F9F3E0;
     --dial-black: #1a1a1a;
@@ -24,7 +32,7 @@
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: #000;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -88,11 +96,11 @@ body {
     background-position-y: -60px;
     border-radius: 50%;
     position: relative;
-    /*box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px black;*/
+    /*box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px black;
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.5),
         inset 0 0 20px black,
         inset 0 2px 6px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+        inset 0 -2px 6px rgba(0, 0, 0, 0.4);*/
     overflow: hidden;
     border: 4px solid #111;
     background-color: var(--dial-black);
@@ -113,7 +121,7 @@ body {
     width: fit-content;
     height: fit-content;
     font-weight: 300;
-    text-shadow: var(--dial-cream) 0px 0px 39px;
+    /*text-shadow: var(--dial-cream) 0px 0px 39px;*/
     opacity: 0.6;
     transition: opacity 0.1s ease, color 0.1s ease;
 }
@@ -157,7 +165,7 @@ body {
     font-size: 125px;
     font-weight: 400;
     color: var(--dial-cream);
-    /*text-shadow: 0 0 20px rgba(249, 243, 224, 0.4);*/
+    text-shadow: 0 0 20px rgba(249, 243, 224, 0.4);
     letter-spacing: -2px;
     transition: color 0.15s ease;
     min-width: 3ch;
@@ -415,9 +423,22 @@ body {
 .odometer {
     border: 2px solid var(--dial-cream-border);
     color: var(--bg-color);
-    font-family: "Montserrat", san-serif;
+    font-family: "Montserrat", sans-serif;
     border-radius: 8px;
     overflow: hidden;
+    display: flex;
+}
+
+.odo-digit {
+    width: 28px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 500;
+    padding: 2px 0;
+}
+
+.odo-last {
+    background: var(--mood-bad-dark);
 }
 
 .odometer-wrapper {
@@ -428,32 +449,6 @@ body {
     margin: 3px 24px;
     flex-direction: column;
     gap: 8px;
-}
-
-.odometer-formatting-mark {
-    display: none;
-}
-
-.odometer-inside {
-    display: grid;
-    font-weight: 500;
-    grid-template-columns: repeat(5, 25px);
-  height: 100%;
-  align-items: center;
-  font-size: 22px;
-}
-
-.odometer-value {
-    text-align: center;
-    padding-top: 2px;
-}
-
-.odometer.odometer-auto-theme .odometer-digit {
-    width: 15px;
-}
-
-.odometer-digit:last-child {
-    background: var(--mood-bad-dark);
 }
 
 .odometer-km {
@@ -682,7 +677,8 @@ body {
     height: 25px;
 }
 
-.color-benzina .icon-svg {
+.color-benzina .icon-svg,
+.color-benzina.blink .icon-svg {
     fill: var(--orange);
     fill-opacity: 1;
 }
@@ -865,6 +861,25 @@ svg {
     font-weight: 300;
 }
 
+.caricamento {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    border: 4px solid #111;
+    background: var(--dial-cream) url('./assets/images/Fiat.png') no-repeat center / contain;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5),
+        inset 0 0 20px black,
+        inset 0 2px 6px rgba(255, 255, 255, 0.15),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
 .map-info {
     height: 150px;
     width: 600px;
@@ -876,4 +891,64 @@ svg {
     margin: auto;
     z-index: 1;
     box-shadow: 0 -50px 50px var(--dial-black);
+}
+
+/* Effetto CRT (schermo TV che si accende/spegne), adattato da
+   https://codepen.io/hodd/pen/pLJPMm : collasso in due fasi sequenziali,
+   prima l'altezza a una linea orizzontale bianca, poi la larghezza a zero.
+   Applicato direttamente al cruscotto: il collasso/apertura È il fade
+   out/in veloce, non un passaggio separato. */
+.dashboard-display {
+    transform-origin: 50% 50%;
+}
+
+.dashboard-display.crt-off {
+    animation: crt-off 0.4s ease-in forwards;
+}
+
+.dashboard-display.crt-on {
+    animation: crt-on 0.4s ease-out forwards;
+}
+
+@keyframes crt-off {
+    0%   { transform: scaleY(1) scaleX(1); filter: brightness(1); opacity: 1; }
+    45%  { transform: scaleY(0.006) scaleX(1); filter: brightness(4); opacity: 1; }
+    100% { transform: scaleY(0.006) scaleX(0.001); filter: brightness(4); opacity: 0; }
+}
+
+@keyframes crt-on {
+    0%   { transform: scaleY(0.006) scaleX(0.001); filter: brightness(4); opacity: 1; }
+    55%  { transform: scaleY(0.006) scaleX(1); filter: brightness(4); opacity: 1; }
+    100% { transform: scaleY(1) scaleX(1); filter: brightness(1); opacity: 1; }
+}
+
+#standby-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#standby-text {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 52px;
+    letter-spacing: 3px;
+    color: var(--dial-cream-border);
+    text-shadow: 0 0 24px rgba(146, 140, 122, 0.35);
+    opacity: 0;
+    transition: opacity 0.65s ease;
+}
+
+#standby-text.visible {
+    opacity: 1;
+}
+
+.no-anim, .no-anim * {
+    transition: none !important;
+    animation: none !important;
 }

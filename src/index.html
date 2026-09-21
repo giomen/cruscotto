@@ -4,15 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
     <title>Cruscotto digitale</title>
     <link rel="preload" href="assets/fonts/Montserrat-Regular.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="preload" href="assets/fonts/RobotoCondensed-Regular.ttf" as="font" type="font/ttf" crossorigin>
-    
+    <link rel="preload" href="assets/fonts/PlayfairDisplay-Italic.woff2" as="font" type="font/woff2" crossorigin>
+
     <!-- CSS ottimizzato -->
     <link rel="stylesheet" href="./style.css">
     
-    <!-- Odometer CSS minimo (solo se usato) -->
-    <link rel="stylesheet" href="./odometer.css" />
+
     <script type="module" src="./main.js"></script>
 
 </head>
@@ -39,6 +40,7 @@
             <label><input type="checkbox" data-spia="profo"> Profondità</label>
             <label><input type="checkbox" data-spia="generat"> Batteria</label>
             <label><input type="checkbox" data-spia="olio"> Olio</label>
+            <label><input type="checkbox" data-spia="riserva"> Riserva</label>
         </div>
         <label class="toggle-row">
             <input type="checkbox" id="toggleMap">
@@ -53,6 +55,10 @@
             <input id="posSlider" type="range" min="0" max="100" step="1" value="0" style="flex:1">
         </div>
         <button id="btnOdoInc" style="font-size:12px;padding:2px 8px;cursor:pointer">Km +1</button>
+        <label class="toggle-row">
+            <input type="checkbox" id="toggleCaricamento">
+            <span>Caricamento</span>
+        </label>
     </div>
     <div class="wrapper">
     <div class="dashboard-display">
@@ -98,7 +104,7 @@
                     </svg>
                 </div>
                 <div class="odometer-wrapper">
-                    <div class="odometer" id="odometer">00000</div>
+                    <div class="odometer" id="odometer"><div class="odo-digit" id="odo-d4">0</div><div class="odo-digit" id="odo-d3">0</div><div class="odo-digit" id="odo-d2">0</div><div class="odo-digit" id="odo-d1">0</div><div class="odo-digit odo-last" id="odo-d0">0</div></div>
                     <div class="odometer-km">Km</div>
                 </div>
                 <div class="icon-unit color-benzina">
@@ -164,9 +170,10 @@
                 <span class="fuel-label fuel-label-f">F</span>
             </div>
         </div>
-        
     </div>
+        <div class="caricamento" id="caricamento" style="display:none"></div>
     </div>
+    <div id="standby-overlay"><div id="standby-text"></div></div>
 </body>
 
 </html>

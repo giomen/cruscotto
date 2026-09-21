@@ -3,14 +3,15 @@ function applyParams(p) {
     const v = val => val === '1' || val === 1 || val === true;
     if (p.needleAngle !== undefined) document.getElementById('needleAngle').value = p.needleAngle;
     if (p.fuelLevel !== undefined) document.getElementById('fuelLevel').value = p.fuelLevel;
-    ['luci','fendi','profo','generat','olio'].forEach(k => {
+    ['luci','fendi','profo','generat','olio','riserva'].forEach(k => {
         const cb = document.querySelector(`[data-spia="${k}"]`);
         if (cb && p[k] !== undefined) cb.checked = v(p[k]);
     });
     if (p.map !== undefined) document.getElementById('toggleMap').checked = v(p.map);
     if (p.semi !== undefined) document.getElementById('toggleSemi').checked = v(p.semi);
+    if (p.caricamento !== undefined) document.getElementById('toggleCaricamento').checked = v(p.caricamento);
     if (p.pos !== undefined) document.getElementById('posSlider').value = p.pos;
-    if (p.odo !== undefined) { odoValue = +p.odo; od.update(odoValue); }
+    if (p.odo !== undefined) { odoValue = +p.odo; updateOdometer(odoValue); }
     if (p.debug) document.getElementById('controls').style.display = '';
     // trigger handlers
     document.getElementById('needleAngle').dispatchEvent(new Event('input'));
@@ -18,6 +19,7 @@ function applyParams(p) {
     document.querySelectorAll('[data-spia]').forEach(cb => cb.dispatchEvent(new Event('change')));
     document.getElementById('toggleMap').dispatchEvent(new Event('change'));
     document.getElementById('toggleSemi').dispatchEvent(new Event('change'));
+    document.getElementById('toggleCaricamento').dispatchEvent(new Event('change'));
     document.getElementById('posSlider').dispatchEvent(new Event('input'));
 }
 
@@ -65,16 +67,13 @@ originMarker.style.left = `${oxPx + (720 - NEEDLE_W) / 2}px`;
 originMarker.style.top  = `${NEEDLE_TOP + oyPx}px`;
 
 // ── Odometer ──────────────────────────────────
-import odoSrc from './odometer.min.js?raw';
-eval(odoSrc);
 let odoValue = 32791;
-var od = new Odometer({
-    el: document.getElementById('odometer'),
-    value: String(odoValue),
-    format: 'd',
-    theme: 'minimal'
-});
-od.update(odoValue);
+
+function updateOdometer(val) {
+    const s = String(val).padStart(5, '0');
+    for (let i = 0; i < 5; i++) document.getElementById(`odo-d${i}`).textContent = s[4 - i];
+}
+updateOdometer(odoValue);
 
 const startAngle = -110;
 const endAngle   =  110;
@@ -128,10 +127,12 @@ function setFuelLevel(percent) {
 fuelInput.addEventListener('input', e => setFuelLevel(+e.target.value));
 setFuelLevel(+fuelInput.value);
 
+
+
 // ── Odometer increment ────────────────────────
 document.getElementById('btnOdoInc').addEventListener('click', () => {
     odoValue++;
-    od.update(odoValue);
+    updateOdometer(odoValue);
 });
 
 // ── Numbers ring ──────────────────────────────
@@ -397,90 +398,177 @@ document.getElementById('toggleSemi').addEventListener('change', e => {
     if (show && routeSteps.length) updateSemiPanel(lastPct >= 0 ? lastPct : 0);
 });
 
-// ── Animazioni ────────────────────────────────
-function animNeedle(ms) {
-    return new Promise(r => {
-        const s = performance.now(), a = -110, b = 110;
-        function f(n) {
-            const t = Math.min((n - s) / ms, 1);
-            let v; if (t < .5) v = a + (b - a) * (t * 2); else v = b - (b - a) * ((t - .5) * 2);
-            setNeedleAngle(v);
-            if (t < 1) requestAnimationFrame(f); else r();
-        }
-        requestAnimationFrame(f);
-    });
-}
-
-function animFuel(ms) {
-    return new Promise(r => {
-        const s = performance.now(), a = 60, b = 2;
-        function f(n) {
-            const t = Math.min((n - s) / ms, 1);
-            setFuelLevel(Math.round(a + (b - a) * t));
-            if (t < 1) requestAnimationFrame(f); else r();
-        }
-        requestAnimationFrame(f);
-    });
-}
-
-function animSpie(ms) {
-    return new Promise(r => {
-        const spie = ['luci','fendi','profo','generat','olio'];
-        const gap = ms / spie.length;
-        spie.forEach((id, i) => setTimeout(() => {
-            const cb = document.querySelector(`[data-spia="${id}"]`);
-            if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
-        }, i * gap));
-        setTimeout(r, ms);
-    });
-}
-
-function animOdo(ms) {
-    return new Promise(r => {
-        const s = performance.now(), a = odoValue, b = a + 5;
-        function f(n) {
-            const t = Math.min((n - s) / ms, 1);
-            const v = Math.round(a + (b - a) * t);
-            if (v !== odoValue) { odoValue = v; od.update(v); }
-            if (t < 1) requestAnimationFrame(f); else r();
-        }
-        requestAnimationFrame(f);
-    });
-}
-
-function animSemi(ms) {
-    return new Promise(r => {
-        const cb = document.getElementById('toggleSemi');
-        if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
-        const fn = () => {
-            if (routeCoords.length < 2) { setTimeout(fn, 100); return; }
-            const s = performance.now();
-            function f(n) {
-                const t = Math.min((n - s) / ms, 1);
-                updatePosition(t);
-                if (t < 1) requestAnimationFrame(f); else r();
-            }
-            requestAnimationFrame(f);
-        };
-        setTimeout(fn, 200);
-    });
-}
-
-async function runAnimSeq() {
-    await animNeedle(3000);
-    await animFuel(4000);
-    await animSpie(3000);
-    await animOdo(5000);
-    await animSemi(10000);
-}
-
-setTimeout(runAnimSeq, 800);
+// ── Toggle Caricamento ────────────────────────
+document.getElementById('toggleCaricamento').addEventListener('change', e => {
+    const show = e.target.checked;
+    document.querySelector('.dashboard-display').style.display = show ? 'none' : '';
+    document.getElementById('caricamento').style.display = show ? '' : 'none';
+});
 
 // ── Spie ──────────────────────────────────────
 document.querySelectorAll('[data-spia]').forEach(checkbox => {
     checkbox.addEventListener('change', e => {
+        if (e.target.dataset.spia === 'riserva') {
+            const el = document.querySelector('.color-benzina');
+            el.classList.toggle('blink', e.target.checked);
+            el.classList.toggle('active', e.target.checked);
+            return;
+        }
         const el = document.querySelector(`.color-${e.target.dataset.spia}`);
         if (!el) return;
         el.classList.toggle('active', e.target.checked);
     });
 });
+
+function initDashboardStream() {
+    const evtSource = new EventSource('/stream');
+
+
+    evtSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        if (data.init) {
+            Object.entries(data.init).forEach(([name, active]) => {
+                if (name === 'standby') {
+                    initStandby(active);
+                    return;
+                }
+                updateSpia(name, active);
+            });
+            return;
+        }
+
+        if (data.name === 'speed') {
+            updateSpeed(data.value);
+            return;
+        }
+
+        if (data.name === 'odometro') {
+            updateOdometro(data.value);
+            return;
+        }
+
+        if (data.name === 'standby') {
+            setStandby(data.active);
+            return;
+        }
+
+        updateSpia(data.name, data.active);
+    };
+
+    evtSource.onerror = function() {
+        console.warn('Connessione SSE persa, riconnessione automatica in corso...');
+    };
+}
+
+function updateSpia(name, active) {
+    if (name === 'speed') return; // gestito separatamente
+    const el = document.querySelector(`[data-spia="${name}"]`);
+    if (el) {
+        el.checked = active;
+        el.dispatchEvent(new Event('change'));
+    }
+}
+
+const CRT_MS = 400;
+const TEXT_FADE_MS = 550;
+const BENTORNATO_HOLD_MS = 1200;
+const ARRIVEDERCI_HOLD_MS = 2500;
+let standbySeqId = 0;
+
+function standbyElements() {
+    return {
+        dash: document.querySelector('.dashboard-display'),
+        overlay: document.getElementById('standby-overlay'),
+        textEl: document.getElementById('standby-text'),
+    };
+}
+
+// Imposta lo stato iniziale (al primo caricamento/riconnessione) senza animazioni.
+function initStandby(active) {
+    const { dash, textEl } = standbyElements();
+    if (!dash || !textEl) return;
+    standbySeqId++;
+    dash.classList.add('no-anim');
+    textEl.classList.add('no-anim');
+    dash.classList.remove('crt-off', 'crt-on');
+    textEl.classList.remove('visible');
+    if (active) {
+        dash.classList.add('crt-off');
+    }
+    void dash.offsetWidth;
+    requestAnimationFrame(() => {
+        dash.classList.remove('no-anim');
+        textEl.classList.remove('no-anim');
+    });
+}
+
+// Transizione animata (effetto CRT applicato direttamente al cruscotto) per i cambi di stato a runtime.
+// Chiave OFF: 1) spegnimento CRT (= fade-out veloce del cruscotto) + "Arrivederci"  2) pausa  3) dissolvenza testo
+// Chiave ON:  1) "Bentornato"  2) dissolvenza testo  3) accensione CRT (= fade-in veloce del cruscotto)
+function setStandby(active) {
+    const { dash, textEl } = standbyElements();
+    if (!dash || !textEl) return;
+    const seq = ++standbySeqId;
+    const stillCurrent = () => seq === standbySeqId;
+
+    if (active) {
+        dash.classList.remove('crt-on');
+        void dash.offsetWidth;
+        dash.classList.add('crt-off');
+        textEl.textContent = 'Arrivederci';
+        textEl.classList.add('visible');
+        setTimeout(() => {
+            if (!stillCurrent()) return;
+            textEl.classList.remove('visible');
+        }, ARRIVEDERCI_HOLD_MS);
+        return;
+    }
+
+    textEl.textContent = 'Bentornato';
+    textEl.classList.add('visible');
+    setTimeout(() => {
+        if (!stillCurrent()) return;
+        textEl.classList.remove('visible');
+        setTimeout(() => {
+            if (!stillCurrent()) return;
+            dash.classList.remove('crt-off');
+            void dash.offsetWidth;
+            dash.classList.add('crt-on');
+            setTimeout(() => {
+                if (!stillCurrent()) return;
+                dash.classList.remove('crt-on');
+            }, CRT_MS);
+        }, TEXT_FADE_MS);
+    }, BENTORNATO_HOLD_MS);
+}
+
+function updateOdometro(km) {
+    const totalKm = Math.max(0, Math.floor(km));
+    const digits = String(totalKm % 100000).padStart(5, '0');
+    for (let i = 0; i < 5; i++) {
+        const el = document.getElementById(`odo-d${4 - i}`);
+        if (el) el.textContent = digits[i];
+    }
+}
+
+function updateSpeed(kmh) {
+    const speedEl = document.getElementById('speedValue');
+    if (speedEl) speedEl.textContent = Math.round(kmh);
+
+    const needleAngleInput = document.getElementById('needleAngle');
+    if (needleAngleInput) {
+        const angle = mapSpeedToAngle(kmh);
+        needleAngleInput.value = angle;
+        needleAngleInput.dispatchEvent(new Event('input'));
+    }
+}
+
+function mapSpeedToAngle(kmh) {
+    const maxSpeed = 140;
+    const minAngle = -110;
+    const maxAngle = 110;
+    const clamped = Math.min(kmh, maxSpeed);
+    return minAngle + (clamped / maxSpeed) * (maxAngle - minAngle);
+}
+initDashboardStream();
