@@ -20,6 +20,11 @@ pin_config = {
     'riserva': 23
 }
 
+# Pin riservati ma non ancora cablati nel codice:
+# GPIO26 (pin fisico 37) -- futuro contagiri (RPM motore). Verificato
+# elettricamente sano durante il debug di olio/generat. Non assegnare
+# ad altri segnali finché il contagiri non viene implementato.
+
 sensors = {}
 state = {}
 

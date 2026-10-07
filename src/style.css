@@ -893,33 +893,27 @@ svg {
     box-shadow: 0 -50px 50px var(--dial-black);
 }
 
-/* Effetto CRT (schermo TV che si accende/spegne), adattato da
-   https://codepen.io/hodd/pen/pLJPMm : collasso in due fasi sequenziali,
+/* Spegnimento (chiave OFF): effetto CRT adattato da
+   https://codepen.io/hodd/pen/pLJPMm, collasso in due fasi sequenziali,
    prima l'altezza a una linea orizzontale bianca, poi la larghezza a zero.
-   Applicato direttamente al cruscotto: il collasso/apertura È il fade
-   out/in veloce, non un passaggio separato. */
+   Accensione (chiave ON): semplice fade-in, nessun effetto CRT. */
 .dashboard-display {
     transform-origin: 50% 50%;
+    transition: opacity 0.4s ease-out;
 }
 
 .dashboard-display.crt-off {
     animation: crt-off 0.4s ease-in forwards;
 }
 
-.dashboard-display.crt-on {
-    animation: crt-on 0.4s ease-out forwards;
+.dashboard-display.dash-hidden {
+    opacity: 0;
 }
 
 @keyframes crt-off {
     0%   { transform: scaleY(1) scaleX(1); filter: brightness(1); opacity: 1; }
     45%  { transform: scaleY(0.006) scaleX(1); filter: brightness(4); opacity: 1; }
     100% { transform: scaleY(0.006) scaleX(0.001); filter: brightness(4); opacity: 0; }
-}
-
-@keyframes crt-on {
-    0%   { transform: scaleY(0.006) scaleX(0.001); filter: brightness(4); opacity: 1; }
-    55%  { transform: scaleY(0.006) scaleX(1); filter: brightness(4); opacity: 1; }
-    100% { transform: scaleY(1) scaleX(1); filter: brightness(1); opacity: 1; }
 }
 
 #standby-overlay {

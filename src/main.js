@@ -470,10 +470,10 @@ function updateSpia(name, active) {
     }
 }
 
-const CRT_MS = 400;
 const TEXT_FADE_MS = 550;
 const BENTORNATO_HOLD_MS = 1200;
 const ARRIVEDERCI_HOLD_MS = 2500;
+const PRE_FADE_IN_PAUSE_MS = 1000;
 let standbySeqId = 0;
 
 function standbyElements() {
@@ -491,7 +491,7 @@ function initStandby(active) {
     standbySeqId++;
     dash.classList.add('no-anim');
     textEl.classList.add('no-anim');
-    dash.classList.remove('crt-off', 'crt-on');
+    dash.classList.remove('crt-off', 'dash-hidden');
     textEl.classList.remove('visible');
     if (active) {
         dash.classList.add('crt-off');
@@ -503,9 +503,9 @@ function initStandby(active) {
     });
 }
 
-// Transizione animata (effetto CRT applicato direttamente al cruscotto) per i cambi di stato a runtime.
+// Transizione animata per i cambi di stato a runtime.
 // Chiave OFF: 1) spegnimento CRT (= fade-out veloce del cruscotto) + "Arrivederci"  2) pausa  3) dissolvenza testo
-// Chiave ON:  1) "Bentornato"  2) dissolvenza testo  3) accensione CRT (= fade-in veloce del cruscotto)
+// Chiave ON:  1) "Bentornato"  2) dissolvenza testo  3) pausa  4) fade-in semplice del cruscotto (nessun effetto CRT)
 function setStandby(active) {
     const { dash, textEl } = standbyElements();
     if (!dash || !textEl) return;
@@ -513,7 +513,7 @@ function setStandby(active) {
     const stillCurrent = () => seq === standbySeqId;
 
     if (active) {
-        dash.classList.remove('crt-on');
+        dash.classList.remove('dash-hidden');
         void dash.offsetWidth;
         dash.classList.add('crt-off');
         textEl.textContent = 'Arrivederci';
@@ -532,13 +532,21 @@ function setStandby(active) {
         textEl.classList.remove('visible');
         setTimeout(() => {
             if (!stillCurrent()) return;
-            dash.classList.remove('crt-off');
-            void dash.offsetWidth;
-            dash.classList.add('crt-on');
             setTimeout(() => {
                 if (!stillCurrent()) return;
-                dash.classList.remove('crt-on');
-            }, CRT_MS);
+                dash.classList.add('no-anim');
+                dash.classList.remove('crt-off');
+                dash.classList.add('dash-hidden');
+                void dash.offsetWidth;
+                requestAnimationFrame(() => {
+                    if (!stillCurrent()) return;
+                    dash.classList.remove('no-anim');
+                    requestAnimationFrame(() => {
+                        if (!stillCurrent()) return;
+                        dash.classList.remove('dash-hidden');
+                    });
+                });
+            }, PRE_FADE_IN_PAUSE_MS);
         }, TEXT_FADE_MS);
     }, BENTORNATO_HOLD_MS);
 }
