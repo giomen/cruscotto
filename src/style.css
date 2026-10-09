@@ -165,7 +165,6 @@ body {
     font-size: 125px;
     font-weight: 400;
     color: var(--dial-cream);
-    text-shadow: 0 0 20px rgba(249, 243, 224, 0.4);
     letter-spacing: -2px;
     transition: color 0.15s ease;
     min-width: 3ch;

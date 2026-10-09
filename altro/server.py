@@ -11,6 +11,28 @@ app = Flask(__name__)
 clients = []
 clients_lock = threading.Lock()
 
+# ── Mappa GPIO (BCM) / pin fisico ────────────────────
+# #  Segnale                         GPIO (BCM)  Pin fisico
+# 1  Luci (anabbaglianti)            GPIO17      11
+# 2  Fendinebbia                     GPIO22      15
+# 3  Profondità                      GPIO27      13
+# 4  Batteria/Generatore             GPIO24      18
+# 5  Olio                            GPIO25      22
+# 6  Riserva                         GPIO23      16
+# 7  Tachimetro (impulsi velocità)   GPIO18      12
+# 8  Chiave/Ignition (standby)       GPIO6       31
+#    Riservato, non cablato: futuro contagiri (RPM motore)
+#                                    GPIO26      37
+#
+# GND di riferimento disponibili su tutto l'header: pin fisici
+# 6, 9, 14, 20, 25, 30, 34, 39.
+#
+# Luci/fendi/profo/generat/olio/riserva passano da una scheda
+# optoisolatore multi-canale (GND di uscita comune): uscita a LOW = spia
+# attiva. Il segnale chiave (GPIO6) ha invece polarità opposta (non passa
+# dallo stesso optoisolatore delle spie): 3,3V/HIGH = chiave ON, 0V/LOW =
+# chiave OFF.
+
 pin_config = {
     'luci': 17,
     'fendi': 22,
@@ -19,11 +41,6 @@ pin_config = {
     'olio': 25,
     'riserva': 23
 }
-
-# Pin riservati ma non ancora cablati nel codice:
-# GPIO26 (pin fisico 37) -- futuro contagiri (RPM motore). Verificato
-# elettricamente sano durante il debug di olio/generat. Non assegnare
-# ad altri segnali finché il contagiri non viene implementato.
 
 sensors = {}
 state = {}
