@@ -42,7 +42,6 @@ const RADIUS_RAGGIERA = R - 26;
 const RADIUS_TACCHE   = R - 46;
 const RADIUS_NUMBERS  = R * (138 / 200);
 const RADIUS_FUEL     = R * (180 / 200);
-const FONT_NUMBER     = R * (28  / 200);
 
 const NEEDLE_W   = 10;
 const NEEDLE_H   = R * (102  / 200);
@@ -135,45 +134,73 @@ document.getElementById('btnOdoInc').addEventListener('click', () => {
     updateOdometer(odoValue);
 });
 
+// ── Scala contagiri (RPM) ─────────────────────
+const RPM_MAX         = 6500;
+const RPM_YELLOW_FROM = 4500;
+const RPM_RED_FROM    = 5500;
+
+// Zona permanente (marcatura sul quadrante, indipendente dallo sweep "active"):
+// giallo 4500-5500, rosso 5500-6500. Riusa .danger (già rosso in CSS per
+// tacca/tacca-raggiera/number) e la nuova .zone-warn (giallo).
+function rpmZoneClass(rpm) {
+    if (rpm >= RPM_RED_FROM) return 'danger';
+    if (rpm >= RPM_YELLOW_FROM) return 'zone-warn';
+    return null;
+}
+
 // ── Numbers ring ──────────────────────────────
 const containerNumbers = document.getElementById('numbers-ring');
-const valoriNumeri = [0, 20, 40, 60, 80, 100, 120, 140, 160];
+const valoriNumeri = [0, 1000, 2000, 3000, 4000, 5000, 6000];
+const valoriNumeriIntermedi = [500, 1500, 2500, 3500, 4500, 5500, 6500];
+const FONT_NUMBER_MAJOR = 36;
+const FONT_NUMBER_MINOR = 16;
 
-valoriNumeri.forEach(kmh => {
-    const angle = startAngle + (kmh / 160) * totalArc;
+function addNumero(rpm, fontSize) {
+    const angle = startAngle + (rpm / RPM_MAX) * totalArc;
     const el = document.createElement('div');
     el.classList.add('number');
+    const zone = rpmZoneClass(rpm);
+    if (zone) el.classList.add(zone);
     el.dataset.angle = angle.toFixed(2);
     el.style.transformOrigin = `50% calc(50% + ${RADIUS_NUMBERS}px)`;
-    el.style.fontSize        = `${FONT_NUMBER}px`;
+    el.style.fontSize        = `${fontSize}px`;
     el.style.transform       = `rotate(${angle}deg)`;
-    el.innerHTML = `<span style="display:block; transform:rotate(${-angle}deg)">${kmh}</span>`;
+    el.innerHTML = `<span style="display:block; transform:rotate(${-angle}deg)">${rpm}</span>`;
     containerNumbers.appendChild(el);
-});
+}
 
-// ── Tacche principali ─────────────────────────
+valoriNumeri.forEach(rpm => addNumero(rpm, FONT_NUMBER_MAJOR));
+valoriNumeriIntermedi.forEach(rpm => addNumero(rpm, FONT_NUMBER_MINOR));
+
+// ── Tacche principali (ogni 250 rpm, major ogni 500) ──
 const containerPrinc = document.getElementById('tacche-principali');
-const countPrinc = 33;
+const countPrinc = 27;
 
 for (let i = 0; i < countPrinc; i++) {
     const angle = startAngle + (totalArc / (countPrinc - 1)) * i;
+    const rpm = (i / (countPrinc - 1)) * RPM_MAX;
     const el = document.createElement('div');
     el.classList.add('tacca');
     if (i % 2 !== 0) el.classList.add('tacca-sottile');
+    const zone = rpmZoneClass(rpm);
+    if (zone) el.classList.add(zone);
     el.dataset.angle = angle.toFixed(2);
     el.style.transformOrigin = `50% calc(50% + ${RADIUS_TACCHE}px)`;
     el.style.transform = `rotate(${angle}deg)`;
     containerPrinc.appendChild(el);
 }
 
-// ── Tacche raggiera ───────────────────────────
+// ── Tacche raggiera (fini, solo decorative) ───
 const containerRaggiera = document.getElementById('tacche-raggiera');
 const countRaggiera = 160;
 
 for (let i = 0; i < countRaggiera; i++) {
     const angle = startAngle + (totalArc / (countRaggiera - 1)) * i;
+    const rpm = (i / (countRaggiera - 1)) * RPM_MAX;
     const el = document.createElement('div');
     el.classList.add('tacca-raggiera');
+    const zone = rpmZoneClass(rpm);
+    if (zone) el.classList.add(zone);
     el.dataset.angle = angle.toFixed(2);
     el.style.transformOrigin = `50% calc(50% + ${RADIUS_RAGGIERA}px)`;
     el.style.transform = `rotate(${angle}deg)`;
@@ -188,15 +215,6 @@ function setNeedleAngle(angle) {
     needleEl.style.transform = `rotate(${angle}deg)`;
     angleValue.textContent   = angle;
     angleInput.value         = angle;
-
-    const kmh     = Math.round(((angle - startAngle) / (endAngle - startAngle)) * 160);
-    const speedEl = document.getElementById('speedValue');
-    speedEl.textContent = Math.max(0, Math.min(160, kmh));
-    speedEl.style.color = kmh >= 80 ? 'var(--needle-red)' : 'var(--dial-cream)';
-
-    document.querySelectorAll('[data-angle]').forEach(tacca => {
-        tacca.classList.toggle('active', parseFloat(tacca.dataset.angle) <= angle);
-    });
 }
 
 angleInput.addEventListener('input', e => setNeedleAngle(e.target.valueAsNumber));
@@ -443,6 +461,11 @@ function initDashboardStream() {
             return;
         }
 
+        if (data.name === 'rpm') {
+            updateRpm(data.value);
+            return;
+        }
+
         if (data.name === 'odometro') {
             updateOdometro(data.value);
             return;
@@ -551,32 +574,42 @@ function setStandby(active) {
     }, BENTORNATO_HOLD_MS);
 }
 
+// Riferimenti DOM e ultimo valore scritto, per evitare lookup e ridisegni
+// inutili sui percorsi aggiornati a 10Hz via SSE (speed/odometro/rpm).
+const odoDigitEls = [0, 1, 2, 3, 4].map(i => document.getElementById(`odo-d${4 - i}`));
+let lastOdoDigits = null;
+
 function updateOdometro(km) {
     const totalKm = Math.max(0, Math.floor(km));
     const digits = String(totalKm % 100000).padStart(5, '0');
+    if (digits === lastOdoDigits) return; // la maggior parte dei tick non cambia km
+    lastOdoDigits = digits;
     for (let i = 0; i < 5; i++) {
-        const el = document.getElementById(`odo-d${4 - i}`);
-        if (el) el.textContent = digits[i];
+        if (odoDigitEls[i]) odoDigitEls[i].textContent = digits[i];
     }
 }
 
+const speedEl = document.getElementById('speedValue');
+let lastSpeedRounded = null;
+
+// Solo lettura digitale: la lancetta ora segue l'RPM (updateRpm), non la velocità.
 function updateSpeed(kmh) {
-    const speedEl = document.getElementById('speedValue');
-    if (speedEl) speedEl.textContent = Math.round(kmh);
-
-    const needleAngleInput = document.getElementById('needleAngle');
-    if (needleAngleInput) {
-        const angle = mapSpeedToAngle(kmh);
-        needleAngleInput.value = angle;
-        needleAngleInput.dispatchEvent(new Event('input'));
-    }
+    if (!speedEl) return;
+    const rounded = Math.round(kmh);
+    if (rounded === lastSpeedRounded) return;
+    lastSpeedRounded = rounded;
+    speedEl.textContent = rounded;
+    speedEl.style.color = rounded >= 80 ? 'var(--needle-red)' : 'var(--dial-cream)';
 }
 
-function mapSpeedToAngle(kmh) {
-    const maxSpeed = 140;
-    const minAngle = -110;
-    const maxAngle = 110;
-    const clamped = Math.min(kmh, maxSpeed);
-    return minAngle + (clamped / maxSpeed) * (maxAngle - minAngle);
+function updateRpm(rpm) {
+    const angle = mapRpmToAngle(rpm);
+    angleInput.value = angle;
+    angleInput.dispatchEvent(new Event('input'));
+}
+
+function mapRpmToAngle(rpm) {
+    const clamped = Math.max(0, Math.min(RPM_MAX, rpm));
+    return startAngle + (clamped / RPM_MAX) * totalArc;
 }
 initDashboardStream();

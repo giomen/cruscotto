@@ -21,8 +21,7 @@ clients_lock = threading.Lock()
 # 6  Riserva                         GPIO23      16
 # 7  Tachimetro (impulsi velocità)   GPIO18      12
 # 8  Chiave/Ignition (standby)       GPIO6       31
-#    Riservato, non cablato: futuro contagiri (RPM motore)
-#                                    GPIO26      37
+# 9  Contagiri (impulsi RPM)         GPIO26      37
 #
 # GND di riferimento disponibili su tutto l'header: pin fisici
 # 6, 9, 14, 20, 25, 30, 34, 39.
@@ -141,12 +140,15 @@ def salva_km():
         with open(ODOMETRO_FILE, 'w') as f:
             json.dump({'km_totali': km}, f)
 
+# Niente print() qui: questa callback scatta ad ogni impulso fisico del
+# sensore (decine/centinaia di volte al secondo in marcia). Una print/flush
+# per impulso satura il GIL e l'I/O su un Pi Zero 2, ritardando a cascata
+# anche i broadcast SSE (speed/rpm), che sembrano quindi arrivare a scatti.
 def tachimetro_callback():
     global pulse_count, total_impulsi
     with pulse_lock:
         pulse_count += 1
         total_impulsi += 1
-    print("TACH", pulse_count, total_impulsi, flush=True)
 
 tach = DigitalInputDevice(18, pull_up=True, bounce_time=0.001)
 tach.when_activated = tachimetro_callback
@@ -168,6 +170,37 @@ def calcola_velocita():
 carica_km()
 threading.Thread(target=calcola_velocita, daemon=True).start()
 threading.Thread(target=salva_km, daemon=True).start()
+
+# ── Contagiri (RPM) ───────────────────────────────────
+# GPIO26, 1 impulso per giro: rpm = frequenza_hz * 60. Conta un solo fronte
+# (when_activated) per evitare il raddoppio che si avrebbe contando anche
+# when_deactivated come fa il tachimetro velocità sopra — se il sensore
+# emette più impulsi per giro, dividere qui di conseguenza.
+RPM_PIN = 26
+
+rpm_pulse_count = 0
+rpm_pulse_lock = threading.Lock()
+
+def rpm_callback():
+    global rpm_pulse_count
+    with rpm_pulse_lock:
+        rpm_pulse_count += 1
+
+rpm_sensor = DigitalInputDevice(RPM_PIN, pull_up=True, bounce_time=0.001)
+rpm_sensor.when_activated = rpm_callback
+
+def calcola_rpm():
+    global rpm_pulse_count
+    while True:
+        time.sleep(UPDATE_INTERVAL)
+        with rpm_pulse_lock:
+            impulsi = rpm_pulse_count
+            rpm_pulse_count = 0
+        frequenza_hz = impulsi / UPDATE_INTERVAL
+        rpm = frequenza_hz * 60
+        broadcast({'name': 'rpm', 'value': round(rpm, 1)})
+
+threading.Thread(target=calcola_rpm, daemon=True).start()
 
 # ── Routes ────────────────────────────────────────────
 @app.route('/')
@@ -198,4 +231,13 @@ def stream():
     return Response(event_stream(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, threaded=True, use_reloader=False)
+    try:
+        # Server WSGI multi-thread più leggero del dev server di Flask per
+        # un uso 24/7 su Pi Zero 2 (meno overhead per richiesta, stesso
+        # supporto a connessioni SSE long-lived con threads=N).
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=8080, threads=4)
+    except ImportError:
+        print('waitress non installato (pip install waitress nel venv): '
+              'uso il dev server Flask come fallback.', flush=True)
+        app.run(host='0.0.0.0', port=8080, threaded=True, use_reloader=False)

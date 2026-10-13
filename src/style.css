@@ -126,15 +126,15 @@ body {
     transition: opacity 0.1s ease, color 0.1s ease;
 }
 
-.number.active {
-    color: var(--mood-warning);
-    opacity: 1;
-    /*text-shadow: var(--mood-warning) 0px 0px 15px;*/
-    /*Controllare se display è luminoso abbastanza*/
-}
-
 .number.danger {
     color: var(--needle-red);
+}
+
+/* Zona permanente del contagiri (marcatura sul quadrante, non legata allo
+   sweep "active"): giallo 4500-5500 rpm. .danger (rosso) è già definito
+   sopra e riusato per la zona 5500-6500. */
+.number.zone-warn {
+    color: var(--mood-warning);
 }
 
 .center-dial {
@@ -255,14 +255,14 @@ body {
     margin: auto;
 }
 
-.tacca-raggiera.active,
-.tacca.active {
-    background: var(--mood-warning);
-}
-
 .tacca-raggiera.danger,
 .tacca.danger {
     background: var(--needle-red);
+}
+
+.tacca-raggiera.zone-warn,
+.tacca.zone-warn {
+    background: var(--mood-warning);
 }
 
 .tacche-principali {
@@ -605,6 +605,7 @@ body {
     left: 0;
     right: 0;
     transform: rotate(0deg);
+    will-change: transform;
     z-index: 100;
     border-radius: 3px;
     clip-path: polygon(0% 100%, 100% 100%, 70% 1%, 60% 0%, 40% 0%, 30% 1%);
