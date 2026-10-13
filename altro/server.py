@@ -6,6 +6,7 @@ import threading
 import queue
 import os
 import subprocess
+import collections
 
 app = Flask(__name__)
 clients = []
@@ -176,28 +177,46 @@ threading.Thread(target=salva_km, daemon=True).start()
 # (when_activated) per evitare il raddoppio che si avrebbe contando anche
 # when_deactivated come fa il tachimetro velocità sopra — se il sensore
 # emette più impulsi per giro, dividere qui di conseguenza.
+#
+# Misura basata sul PERIODO tra impulsi consecutivi (timestamp precisi
+# dell'interrupt), non sul conteggio impulsi in una finestra di tempo fissa:
+# contare impulsi in una finestra da 100ms-1s è intrinsecamente quantizzato
+# (al minimo arrivano solo 1-2 impulsi a finestra, quindi il valore salta
+# tra multipli interi), mentre misurare il tempo esatto tra impulsi usa
+# tutta la risoluzione del timer e dà una stima molto più precisa a parità
+# di ritardo. Si fa la media degli ultimi RPM_PERIOD_HISTORY intervalli.
 RPM_PIN = 26
+RPM_PERIOD_HISTORY = 5
+RPM_STALE_AFTER = 1.0  # nessun impulso da tanto: motore considerato fermo
 
-rpm_pulse_count = 0
-rpm_pulse_lock = threading.Lock()
+rpm_lock = threading.Lock()
+rpm_last_pulse_time = None
+rpm_periods = collections.deque(maxlen=RPM_PERIOD_HISTORY)
 
 def rpm_callback():
-    global rpm_pulse_count
-    with rpm_pulse_lock:
-        rpm_pulse_count += 1
+    global rpm_last_pulse_time
+    now = time.monotonic()
+    with rpm_lock:
+        if rpm_last_pulse_time is not None:
+            period = now - rpm_last_pulse_time
+            if period > 0:
+                rpm_periods.append(period)
+        rpm_last_pulse_time = now
 
 rpm_sensor = DigitalInputDevice(RPM_PIN, pull_up=True, bounce_time=0.001)
 rpm_sensor.when_activated = rpm_callback
 
 def calcola_rpm():
-    global rpm_pulse_count
     while True:
         time.sleep(UPDATE_INTERVAL)
-        with rpm_pulse_lock:
-            impulsi = rpm_pulse_count
-            rpm_pulse_count = 0
-        frequenza_hz = impulsi / UPDATE_INTERVAL
-        rpm = frequenza_hz * 60
+        with rpm_lock:
+            last_time = rpm_last_pulse_time
+            periods = list(rpm_periods)
+        if not periods or last_time is None or (time.monotonic() - last_time) > RPM_STALE_AFTER:
+            rpm = 0.0
+        else:
+            avg_period = sum(periods) / len(periods)
+            rpm = 60.0 / avg_period if avg_period > 0 else 0.0
         broadcast({'name': 'rpm', 'value': round(rpm, 1)})
 
 threading.Thread(target=calcola_rpm, daemon=True).start()
