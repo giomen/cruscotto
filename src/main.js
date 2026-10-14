@@ -43,10 +43,10 @@ const RADIUS_TACCHE   = R - 46;
 const RADIUS_NUMBERS  = R * (138 / 200);
 const RADIUS_FUEL     = R * (180 / 200);
 
-const NEEDLE_W   = 10;
+const NEEDLE_W   = 6;
 const NEEDLE_H   = R * (102  / 200);
 const NEEDLE_TOP = R * (-272 / 200);
-const NEEDLE_OX  = 10;
+const NEEDLE_OX  = 6;
 const NEEDLE_OY  = 330;
 
 // Needle
