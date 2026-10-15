@@ -40,7 +40,7 @@ const R = SIZE / 2; // es. 360 per 720px
 
 const RADIUS_RAGGIERA = R - 26;
 const RADIUS_TACCHE   = R - 46;
-const RADIUS_NUMBERS  = R * (138 / 200);
+const RADIUS_NUMBERS  = R * (168 / 200);
 const RADIUS_FUEL     = R * (180 / 200);
 
 const NEEDLE_W   = 6;
