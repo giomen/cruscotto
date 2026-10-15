@@ -115,56 +115,82 @@ current_standby = ignition.is_active
 if current_standby:
     _schedule_shutdown()
 
-# ── Tachimetro / Odometro ────────────────────────────
-IMPULSI_PER_KM = 10000
+# ── Tachimetro (velocità) / Odometro ──────────────────
+# GPIO18: il cavo che arriva dall'auto fa 1 giro = 1 metro percorso, ma il
+# sensore/convertitore collegato al GPIO emette più di 1 impulso per giro
+# (es. ruota fonica multi-polo) — calibrazione EMPIRICA 14/10/2026: con un
+# avvitatore Einhell TE-CD 18/40 a velocità 2 (~1500 giri/min nominali =
+# 25 giri/sec = atteso 90 km/h con 1 impulso/giro) collegato al cavo, la
+# velocità misurata si è stabilizzata a una media di ~494 km/h su 96
+# campioni -> fattore di correzione ~5.49, quindi ~5.49 impulsi per giro
+# reale. Approssimata (il regime esatto dell'avvitatore in quelle
+# condizioni non è certificato) — da raffinare con un riferimento più
+# preciso se disponibile in futuro.
+#
+# Misura basata sul PERIODO tra impulsi consecutivi (stesso approccio
+# usato per il contagiri, vedi calcola_rpm sotto): contare impulsi in una
+# finestra fissa da 100ms è quantizzato a bassa velocità (pochi impulsi
+# per finestra fanno saltare il valore tra multipli interi invece di
+# muoversi con continuità). Conta un solo fronte per impulso
+# (when_activated) — contare anche when_deactivated mescolerebbe due
+# misure di periodo per giro, reintroducendo oscillazione se il duty
+# cycle del segnale non è perfettamente simmetrico.
+METRI_PER_IMPULSO = 1 / 5.4917
 UPDATE_INTERVAL = 0.1
 ODOMETRO_FILE = 'odometro.json'
+SPEED_PERIOD_HISTORY = 5
+SPEED_STALE_AFTER = 1.0  # nessun impulso da tanto: veicolo fermo
 
-pulse_count = 0
-total_impulsi = 0
-pulse_lock = threading.Lock()
+speed_lock = threading.Lock()
+total_impulsi = 0  # impulsi totali, per l'odometro (persistente)
+speed_last_pulse_time = None
+speed_periods = collections.deque(maxlen=SPEED_PERIOD_HISTORY)
 
 def carica_km():
     global total_impulsi
     try:
         with open(ODOMETRO_FILE) as f:
             data = json.load(f)
-            total_impulsi = int(data.get('km_totali', 00000) * IMPULSI_PER_KM)
+            total_impulsi = int(data.get('km_totali', 0) * 1000 / METRI_PER_IMPULSO)
     except FileNotFoundError:
         total_impulsi = 0
 
 def salva_km():
     while True:
         time.sleep(30)
-        with pulse_lock:
-            km = total_impulsi / IMPULSI_PER_KM
+        with speed_lock:
+            km = (total_impulsi * METRI_PER_IMPULSO) / 1000
         with open(ODOMETRO_FILE, 'w') as f:
             json.dump({'km_totali': km}, f)
 
-# Niente print() qui: questa callback scatta ad ogni impulso fisico del
-# sensore (decine/centinaia di volte al secondo in marcia). Una print/flush
-# per impulso satura il GIL e l'I/O su un Pi Zero 2, ritardando a cascata
-# anche i broadcast SSE (speed/rpm), che sembrano quindi arrivare a scatti.
 def tachimetro_callback():
-    global pulse_count, total_impulsi
-    with pulse_lock:
-        pulse_count += 1
+    global total_impulsi, speed_last_pulse_time
+    now = time.monotonic()
+    with speed_lock:
         total_impulsi += 1
+        if speed_last_pulse_time is not None:
+            period = now - speed_last_pulse_time
+            if period > 0:
+                speed_periods.append(period)
+        speed_last_pulse_time = now
 
 tach = DigitalInputDevice(18, pull_up=True, bounce_time=0.001)
 tach.when_activated = tachimetro_callback
-tach.when_deactivated = tachimetro_callback
 
 def calcola_velocita():
-    global pulse_count
     while True:
         time.sleep(UPDATE_INTERVAL)
-        with pulse_lock:
-            impulsi = pulse_count
-            pulse_count = 0
-            km_totali = total_impulsi / IMPULSI_PER_KM
+        with speed_lock:
+            last_time = speed_last_pulse_time
+            periods = list(speed_periods)
+            km_totali = (total_impulsi * METRI_PER_IMPULSO) / 1000
 
-        km_h = (impulsi / IMPULSI_PER_KM) * (3600 / UPDATE_INTERVAL)
+        if not periods or last_time is None or (time.monotonic() - last_time) > SPEED_STALE_AFTER:
+            km_h = 0.0
+        else:
+            avg_period = sum(periods) / len(periods)
+            km_h = (METRI_PER_IMPULSO / avg_period) * 3.6 if avg_period > 0 else 0.0
+
         broadcast({'name': 'speed', 'value': round(km_h, 1)})
         broadcast({'name': 'odometro', 'value': round(km_totali, 2)})
 
@@ -174,9 +200,8 @@ threading.Thread(target=salva_km, daemon=True).start()
 
 # ── Contagiri (RPM) ───────────────────────────────────
 # GPIO26, 1 impulso per giro: rpm = frequenza_hz * 60. Conta un solo fronte
-# (when_activated) per evitare il raddoppio che si avrebbe contando anche
-# when_deactivated come fa il tachimetro velocità sopra — se il sensore
-# emette più impulsi per giro, dividere qui di conseguenza.
+# (when_activated), stesso motivo del tachimetro velocità sopra — se il
+# sensore emette più impulsi per giro, dividere qui di conseguenza.
 #
 # Misura basata sul PERIODO tra impulsi consecutivi (timestamp precisi
 # dell'interrupt), non sul conteggio impulsi in una finestra di tempo fissa:
@@ -222,6 +247,34 @@ def calcola_rpm():
 threading.Thread(target=calcola_rpm, daemon=True).start()
 
 # ── Routes ────────────────────────────────────────────
+# Il monitor è alimentato esternamente (non dal Pi): l'unico controllo che
+# abbiamo da qui è il segnale HDMI. vcgencmd display_power non ha effetto
+# con il driver KMS usato su questo sistema (verificato: lo stato resta
+# invariato) — si usa invece DPMS via X11 (xset), che il kiosk tiene
+# disabilitato di proposito per non spegnersi mai da solo durante l'uso
+# normale. Per questo: lo riabilitiamo solo per il tempo dello spegnimento
+# esplicito, poi lo ridisabilitiamo appena il monitor torna acceso, così i
+# timeout DPMS standard (10 minuti) non spengono mai lo schermo da soli
+# mentre la chiave è su ON. Chiamato dal frontend (main.js) a fine
+# animazione di spegnimento/accensione, non dal backend direttamente, per
+# restare sincronizzato con la durata reale dell'animazione sullo schermo.
+_display_env = {**os.environ, 'DISPLAY': ':0'}
+
+@app.route('/display/<state>')
+def set_display_power(state):
+    if state not in ('on', 'off'):
+        return ('', 400)
+    try:
+        if state == 'off':
+            subprocess.run(['xset', '+dpms'], env=_display_env, timeout=5)
+            subprocess.run(['xset', 'dpms', 'force', 'off'], env=_display_env, timeout=5)
+        else:
+            subprocess.run(['xset', 'dpms', 'force', 'on'], env=_display_env, timeout=5)
+            subprocess.run(['xset', '-dpms'], env=_display_env, timeout=5)
+    except Exception as e:
+        print('display_power error:', e, flush=True)
+    return ('', 204)
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -240,7 +293,7 @@ def stream():
             init_data = dict(state)
             init_data['standby'] = current_standby
             yield f"data: {json.dumps({'init': init_data})}\n\n"
-            yield f"data: {json.dumps({'name': 'odometro', 'value': round(total_impulsi / IMPULSI_PER_KM, 2)})}\n\n"
+            yield f"data: {json.dumps({'name': 'odometro', 'value': round((total_impulsi * METRI_PER_IMPULSO) / 1000, 2)})}\n\n"
             while True:
                 data = q.get()
                 yield f"data: {data}\n\n"
@@ -254,8 +307,17 @@ if __name__ == '__main__':
         # Server WSGI multi-thread più leggero del dev server di Flask per
         # un uso 24/7 su Pi Zero 2 (meno overhead per richiesta, stesso
         # supporto a connessioni SSE long-lived con threads=N).
+        #
+        # /stream è una connessione persistente: ogni client collegato (il
+        # kiosk, ma anche un semplice curl di debug lasciato aperto) occupa
+        # un thread per tutta la durata della connessione, non solo per la
+        # singola richiesta. Con pochi thread, un paio di connessioni di
+        # test lasciate aperte bastano a saturare il pool e bloccare anche
+        # il caricamento della pagina principale (schermo bianco sul kiosk).
+        # 12 thread danno margine per il kiosk + qualche connessione extra
+        # senza pesare troppo su un Pi Zero 2.
         from waitress import serve
-        serve(app, host='0.0.0.0', port=8080, threads=4)
+        serve(app, host='0.0.0.0', port=8080, threads=12)
     except ImportError:
         print('waitress non installato (pip install waitress nel venv): '
               'uso il dev server Flask come fallback.', flush=True)

@@ -40,7 +40,7 @@ const R = SIZE / 2; // es. 360 per 720px
 
 const RADIUS_RAGGIERA = R - 26;
 const RADIUS_TACCHE   = R - 46;
-const RADIUS_NUMBERS  = R * (168 / 200);
+const RADIUS_NUMBERS  = R * (138 / 200);
 const RADIUS_FUEL     = R * (180 / 200);
 
 const NEEDLE_W   = 6;
@@ -497,7 +497,16 @@ const TEXT_FADE_MS = 550;
 const BENTORNATO_HOLD_MS = 1200;
 const ARRIVEDERCI_HOLD_MS = 2500;
 const PRE_FADE_IN_PAUSE_MS = 1000;
+const DISPLAY_WAKE_DELAY_MS = 2500; // tempo per il monitor di risincronizzarsi dopo il segnale HDMI
 let standbySeqId = 0;
+
+// Il monitor è alimentato esternamente: l'unico controllo che abbiamo è
+// il segnale HDMI (vedi route /display/<state> in server.py). Fire-and-
+// forget: se la richiesta fallisce (es. riconnessione di rete) non deve
+// bloccare l'animazione sullo schermo.
+function setDisplayPower(on) {
+    fetch(`/display/${on ? 'on' : 'off'}`).catch(() => {});
+}
 
 function standbyElements() {
     return {
@@ -519,6 +528,7 @@ function initStandby(active) {
     if (active) {
         dash.classList.add('crt-off');
     }
+    setDisplayPower(!active);
     void dash.offsetWidth;
     requestAnimationFrame(() => {
         dash.classList.remove('no-anim');
@@ -544,34 +554,42 @@ function setStandby(active) {
         setTimeout(() => {
             if (!stillCurrent()) return;
             textEl.classList.remove('visible');
+            setTimeout(() => {
+                if (!stillCurrent()) return;
+                setDisplayPower(false); // schermo spento solo a fine animazione
+            }, TEXT_FADE_MS);
         }, ARRIVEDERCI_HOLD_MS);
         return;
     }
 
-    textEl.textContent = 'Bentornato';
-    textEl.classList.add('visible');
+    setDisplayPower(true); // riaccende subito il segnale HDMI
     setTimeout(() => {
         if (!stillCurrent()) return;
-        textEl.classList.remove('visible');
+        textEl.textContent = 'Bentornato';
+        textEl.classList.add('visible');
         setTimeout(() => {
             if (!stillCurrent()) return;
+            textEl.classList.remove('visible');
             setTimeout(() => {
                 if (!stillCurrent()) return;
-                dash.classList.add('no-anim');
-                dash.classList.remove('crt-off');
-                dash.classList.add('dash-hidden');
-                void dash.offsetWidth;
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     if (!stillCurrent()) return;
-                    dash.classList.remove('no-anim');
+                    dash.classList.add('no-anim');
+                    dash.classList.remove('crt-off');
+                    dash.classList.add('dash-hidden');
+                    void dash.offsetWidth;
                     requestAnimationFrame(() => {
                         if (!stillCurrent()) return;
-                        dash.classList.remove('dash-hidden');
+                        dash.classList.remove('no-anim');
+                        requestAnimationFrame(() => {
+                            if (!stillCurrent()) return;
+                            dash.classList.remove('dash-hidden');
+                        });
                     });
-                });
-            }, PRE_FADE_IN_PAUSE_MS);
-        }, TEXT_FADE_MS);
-    }, BENTORNATO_HOLD_MS);
+                }, PRE_FADE_IN_PAUSE_MS);
+            }, TEXT_FADE_MS);
+        }, BENTORNATO_HOLD_MS);
+    }, DISPLAY_WAKE_DELAY_MS);
 }
 
 // Riferimenti DOM e ultimo valore scritto, per evitare lookup e ridisegni
